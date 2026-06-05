@@ -1,4 +1,11 @@
 import { API_BASE } from './api';
+import { 
+  processNLP, 
+  generateVoiceFeedback, 
+  generateChatbotResponse,
+  type NLPResult,
+  type Product
+} from './nlpEngine';
 
 const VISION_BASE = 'http://localhost:8001';
 
@@ -8,6 +15,7 @@ export interface ParsedCommand {
     | 'sort'
     | 'pack'
     | 'move'
+    | 'store'
     | 'check_inventory'
     | 'stock_count'
     | 'pause'
@@ -128,6 +136,8 @@ export function parseCommandIntent(rawText: string): ParsedCommand {
     intent = 'start_station';
   } else if (/\b(move|transfer|relocate)\b/.test(text)) {
     intent = 'move';
+  } else if (/\b(store|put away|restock|stock up|stock)\b/.test(text)) {
+    intent = 'store';
   } else if (/\b(queue\s+pick|pick\s+\d+|pick|grab|retrieve|get)\b/.test(text)) {
     intent = 'pick';
   } else if (/\b(sort|organize|separate)\b/.test(text)) {
@@ -181,13 +191,15 @@ async function postTask(
   type: string,
   description: string,
   product?: string,
-  quantity?: number
+  quantity?: number,
+  taskType?: string
 ): Promise<string | undefined> {
   const res = await fetch(`${API_BASE}/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       type,
+      taskType: taskType || type,
       description,
       product,
       quantity: quantity ?? 12,
@@ -218,216 +230,8 @@ function formatInventorySummary(items: any[]): string {
 
 /** Run parsed intent against real backend / vision services. */
 export async function executeVoiceCommand(rawText: string): Promise<CommandResult> {
-  const parsed = parseCommandIntent(rawText);
-  const qty = parsed.quantity ?? 12;
-
-  try {
-    switch (parsed.intent) {
-      case 'stock_count': {
-        const items = await fetchInventory();
-        const match = items.find(
-          (i) =>
-            i.name?.toLowerCase().includes(parsed.product!.toLowerCase()) ||
-            i.category?.toLowerCase().includes(parsed.product!.toLowerCase())
-        );
-        if (!match) {
-          return {
-            parsed,
-            reply: `No inventory row found for "${parsed.product}". Check the Inventory page for exact product names.`,
-            toast: { type: 'info', message: 'Product not found' },
-          };
-        }
-        return {
-          parsed,
-          reply: `${match.name}: ${match.stock} units in stock (${match.status}, bin ${match.bin}).`,
-          toast: { type: 'info', message: 'Stock lookup' },
-        };
-      }
-
-      case 'check_inventory': {
-        const items = await fetchInventory();
-        const low = items.filter((i) => i.status === 'Low Stock' || i.status === 'Out of Stock');
-        const reply =
-          low.length > 0
-            ? `${low.length} item(s) need attention:\n${low
-                .map((i) => `• ${i.name}: ${i.stock} units (${i.status})`)
-                .join('\n')}`
-            : formatInventorySummary(items);
-        return {
-          parsed,
-          reply,
-          toast: { type: 'info', message: 'Inventory report' },
-        };
-      }
-
-      case 'active_tasks': {
-        const tasks = await fetchActiveTasks();
-        const active = tasks.filter((t) => t.status === 'Active').length;
-        const queued = tasks.filter((t) => t.status === 'Queued').length;
-        const waiting = tasks.filter((t) => t.status === 'Waiting').length;
-        const list =
-          tasks.length > 0
-            ? '\n' +
-              tasks
-                .slice(0, 5)
-                .map((t) => `• ${t.id}: ${t.type || 'Task'} — ${t.status} (${t.progress ?? 0}%)`)
-                .join('\n')
-            : '';
-        return {
-          parsed,
-          reply: `${tasks.length} tasks in queue: ${active} active, ${queued} queued, ${waiting} waiting.${list}`,
-          toast: { type: 'info', message: 'Active tasks' },
-        };
-      }
-
-      case 'system_status': {
-        const health = await fetchSystemHealth();
-        const summary = health
-          .map((s: any) => `• ${s.service}: ${s.status} (${s.ping})`)
-          .join('\n');
-        return {
-          parsed,
-          reply: summary ? `System status:\n${summary}` : 'System health data is unavailable.',
-          toast: { type: 'info', message: 'System status' },
-        };
-      }
-
-      case 'stop_camera': {
-        await visionCamera(false);
-        return {
-          parsed,
-          reply: 'Vision camera stopped on port 8001.',
-          toast: { type: 'success', message: 'Camera stopped' },
-        };
-      }
-
-      case 'start_camera': {
-        await visionCamera(true);
-        return {
-          parsed,
-          reply: 'Vision camera started — open the Camera page for the live feed.',
-          toast: { type: 'success', message: 'Camera started' },
-        };
-      }
-
-      case 'start_conveyor': {
-        await postTask('Conveyor', 'Start conveyor belt', undefined, undefined);
-        return {
-          parsed,
-          reply: 'Conveyor start queued for the line controller.',
-          toast: { type: 'success', message: 'Conveyor start queued' },
-        };
-      }
-
-      case 'stop_conveyor': {
-        await postTask('Conveyor', 'Stop conveyor belt', undefined, undefined);
-        return {
-          parsed,
-          reply: 'Conveyor stop queued — belt will halt when the current cycle finishes.',
-          toast: { type: 'success', message: 'Conveyor stop queued' },
-        };
-      }
-
-      case 'pause': {
-        await postTask('Pause', 'Pause robotic arm — operator voice command');
-        return {
-          parsed,
-          reply: 'Pause command queued. Active arm cycles will hold after the current step.',
-          toast: { type: 'info', message: 'Robot pause queued' },
-        };
-      }
-
-      case 'resume_robot': {
-        await postTask('Resume', 'Resume robotic arm — operator voice command');
-        return {
-          parsed,
-          reply: 'Resume command queued. The arm will accept new tasks from the queue.',
-          toast: { type: 'success', message: 'Robot resume queued' },
-        };
-      }
-
-      case 'pick': {
-        const inventory = await fetchInventory();
-        const matched = findInventoryItem(inventory, parsed.product);
-        if (parsed.product && !matched) {
-          return {
-            parsed,
-            reply: `I could not find ${parsed.product} in inventory. Try saying a product name exactly as it appears on the Inventory page.`,
-            toast: { type: 'error', message: 'Product not found' },
-          };
-        }
-
-        if (matched) {
-          const available = matched.stock ?? 0;
-          if (available <= 0) {
-            return {
-              parsed,
-              reply: `${matched.name} is out of stock. Check Inventory for replenishment before queuing a pick task.`,
-              toast: { type: 'error', message: 'Out of stock' },
-            };
-          }
-
-          const requested = qty;
-          const actualQty = Math.min(requested, available);
-          const desc = `Pick ${actualQty} ${matched.name}${parsed.destination ? ` → ${parsed.destination}` : ''}`;
-          const taskId = await postTask('Pick', desc, matched.name, actualQty);
-
-          return {
-            parsed,
-            reply: actualQty < requested
-              ? `Only ${available} ${matched.name} available. Queued a partial pick of ${actualQty} units.`
-              : `Queued pick task for ${actualQty} ${matched.name}${parsed.destination ? ` to ${parsed.destination}` : ''}.`,
-            taskId,
-            toast: { type: 'success', message: 'Pick task queued' },
-          };
-        }
-
-        const desc = `Pick ${qty} items${parsed.destination ? ` → ${parsed.destination}` : ''}`;
-        const taskId = await postTask('Pick', desc, parsed.product, qty);
-        return {
-          parsed,
-          reply: `Queued generic pick task for ${qty} items. Add a product name for an inventory-aware task next time.`,
-          taskId,
-          toast: { type: 'success', message: 'Pick task queued' },
-        };
-      }
-
-      case 'move':
-      case 'sort':
-      case 'pack':
-      case 'start_station': {
-        const type =
-          parsed.intent === 'start_station'
-            ? 'Station'
-            : parsed.intent.charAt(0).toUpperCase() + parsed.intent.slice(1);
-        const desc = `${type} ${qty} ${parsed.product || 'units'}${
-          parsed.destination ? ` → ${parsed.destination}` : ''
-        }${parsed.station ? ` at ${parsed.station}` : ''}`;
-        const taskId = await postTask(type, desc, parsed.product, qty);
-        return {
-          parsed,
-          reply: `Queued: ${desc}. Check Task History for progress.`,
-          taskId,
-          toast: { type: 'success', message: `${type} task queued` },
-        };
-      }
-
-      default:
-        return {
-          parsed,
-          reply:
-            'Command not recognized. Try "Queue pick 10 dark chocolate", "What\'s in stock", "Stop the camera", "Start the conveyor", "Show active tasks", or "System status".',
-          toast: { type: 'error', message: 'Command not recognized' },
-        };
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Request failed';
-    return {
-      parsed,
-      reply: `Could not complete that command: ${msg}. Ensure the backend (port 5000) and vision service (port 8001) are running.`,
-      toast: { type: 'error', message: msg },
-    };
-  }
+  // Use the new NLP-based command execution
+  return executeNLPCommand(rawText);
 }
 
 /** @deprecated Use parseCommandIntent + executeVoiceCommand */
@@ -438,4 +242,213 @@ export function parseCommand(rawText: string): CommandResult {
     reply: 'Use executeVoiceCommand() for live warehouse actions.',
     toast: { type: 'info', message: 'Parsing only' },
   };
+}
+
+/**
+ * Enhanced NLP-based voice command execution
+ * Uses processNLP for flexible natural language understanding
+ */
+export async function executeNLPCommand(rawText: string): Promise<CommandResult> {
+  try {
+    // Fetch available products for fuzzy matching
+    const inventoryData = await fetchInventory();
+    const products: Product[] = inventoryData.map((item: any) => ({
+      id: item.id || item.sku,
+      name: item.name,
+      quantity: item.stock || item.quantity || 0,
+      category: item.category,
+      sku: item.sku,
+    }));
+
+    // Process input through NLP engine
+    const nlpResult = processNLP(rawText, products);
+
+    // Log NLP result for debugging
+    console.log('[Voice] NLP Result:', {
+      intent: nlpResult.intent,
+      product: nlpResult.entities.product,
+      quantity: nlpResult.entities.quantity,
+      errors: nlpResult.validationErrors
+    });
+
+    // Validate NLP result
+    if (nlpResult.validationErrors.length > 0 && nlpResult.intent !== 'UNKNOWN') {
+      console.warn('[Voice] Validation errors:', nlpResult.validationErrors);
+    }
+
+    // Execute based on intent
+    switch (nlpResult.intent) {
+      case 'STORE': {
+        if (nlpResult.validationErrors.length > 0) {
+          return {
+            parsed: { intent: 'store', rawText },
+            reply: `Cannot store items: ${nlpResult.validationErrors.join(', ')}. Please specify a product and quantity.`,
+            toast: { type: 'error', message: nlpResult.validationErrors[0] || 'Missing information' },
+          };
+        }
+
+        if (!nlpResult.entities.product || !nlpResult.entities.quantity) {
+          return {
+            parsed: { intent: 'store', rawText },
+            reply: 'I need a product name and quantity to store items. For example: "Store 5 Milk Chocolates"',
+            toast: { type: 'error', message: 'Invalid store command' },
+          };
+        }
+
+        // Create store task
+        const storeTaskId = await postTask(
+          'Store',
+          `Store ${nlpResult.entities.quantity} ${nlpResult.entities.product}`,
+          nlpResult.entities.product,
+          nlpResult.entities.quantity,
+          'Store'
+        );
+
+        const reply = generateVoiceFeedback(nlpResult, true);
+        return {
+          parsed: { 
+            intent: 'store', 
+            rawText, 
+            product: nlpResult.entities.product, 
+            quantity: nlpResult.entities.quantity 
+          },
+          reply,
+          taskId: storeTaskId,
+          toast: { type: 'success', message: `Stored ${nlpResult.entities.quantity} ${nlpResult.entities.product}` },
+        };
+      }
+
+      case 'RETRIEVE': {
+        if (nlpResult.validationErrors.length > 0) {
+          return {
+            parsed: { intent: 'pick', rawText },
+            reply: `Cannot retrieve items: ${nlpResult.validationErrors.join(', ')}. Please specify a product and quantity.`,
+            toast: { type: 'error', message: nlpResult.validationErrors[0] || 'Missing information' },
+          };
+        }
+
+        if (!nlpResult.entities.product || !nlpResult.entities.quantity) {
+          return {
+            parsed: { intent: 'pick', rawText },
+            reply: 'I need a product name and quantity to retrieve items. For example: "Retrieve 5 Milk Chocolates"',
+            toast: { type: 'error', message: 'Invalid retrieve command' },
+          };
+        }
+
+        // Check availability
+        const productMatch = inventoryData.find(
+          (item: any) => item.name.toLowerCase() === nlpResult.entities.product?.toLowerCase()
+        );
+
+        console.log('[Voice] Product match for retrieve:', {
+          requested: nlpResult.entities.product,
+          found: productMatch?.name,
+          availableStock: productMatch?.stock
+        });
+
+        if (!productMatch) {
+          const reply = generateVoiceFeedback(nlpResult, false, 'product not found');
+          return {
+            parsed: { 
+              intent: 'pick', 
+              rawText, 
+              product: nlpResult.entities.product, 
+              quantity: nlpResult.entities.quantity 
+            },
+            reply,
+            toast: { type: 'error', message: `${nlpResult.entities.product} not found in inventory` },
+          };
+        }
+
+        if (productMatch.stock < nlpResult.entities.quantity) {
+          const reply = generateVoiceFeedback(
+            nlpResult,
+            false,
+            `insufficient stock - only ${productMatch.stock} available`
+          );
+          return {
+            parsed: { 
+              intent: 'pick', 
+              rawText, 
+              product: nlpResult.entities.product, 
+              quantity: nlpResult.entities.quantity 
+            },
+            reply,
+            toast: { type: 'error', message: `Insufficient stock. Available: ${productMatch.stock}` },
+          };
+        }
+
+        // Create retrieve task
+        const retrieveTaskId = await postTask(
+          'Retrieve',
+          `Retrieve ${nlpResult.entities.quantity} ${nlpResult.entities.product}`,
+          nlpResult.entities.product,
+          nlpResult.entities.quantity,
+          'Retrieve'
+        );
+
+        const reply = generateVoiceFeedback(nlpResult, true);
+        return {
+          parsed: { 
+            intent: 'pick', 
+            rawText, 
+            product: nlpResult.entities.product, 
+            quantity: nlpResult.entities.quantity 
+          },
+          reply,
+          taskId: retrieveTaskId,
+          toast: { type: 'success', message: `Retrieving ${nlpResult.entities.quantity} ${nlpResult.entities.product}` },
+        };
+      }
+
+      case 'INVENTORY_CHECK': {
+        const reply = `Checking inventory${nlpResult.entities.product ? ` for ${nlpResult.entities.product}` : ''}...`;
+        return {
+          parsed: { intent: 'check_inventory', rawText },
+          reply,
+          toast: { type: 'info', message: 'Checking inventory...' },
+        };
+      }
+
+      case 'TASK_STATUS': {
+        return {
+          parsed: { intent: 'active_tasks', rawText },
+          reply: 'Displaying active tasks...',
+          toast: { type: 'info', message: 'Loading tasks...' },
+        };
+      }
+
+      case 'ROBOT_STATUS': {
+        return {
+          parsed: { intent: 'system_status', rawText },
+          reply: 'Checking robot status...',
+          toast: { type: 'info', message: 'Loading robot status...' },
+        };
+      }
+
+      case 'HELP': {
+        const reply = generateVoiceFeedback(nlpResult, true);
+        return {
+          parsed: { intent: 'unknown', rawText },
+          reply,
+          toast: { type: 'info', message: 'Help displayed' },
+        };
+      }
+
+      default: {
+        return {
+          parsed: { intent: 'unknown', rawText },
+          reply: 'I did not understand that command. Try: "Store 5 Milk Chocolates", "Retrieve 10 Dark Chocolates", or "Show inventory"',
+          toast: { type: 'error', message: 'Command not recognized' },
+        };
+      }
+    }
+  } catch (error) {
+    console.error('[Voice] Error executing NLP command:', error);
+    return {
+      parsed: { intent: 'unknown', rawText: rawText },
+      reply: 'An error occurred processing your command. Please try again.',
+      toast: { type: 'error', message: 'Execution error' },
+    };
+  }
 }

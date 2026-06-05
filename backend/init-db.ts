@@ -25,22 +25,27 @@ async function initDb() {
   console.log("Schema created successfully.");
 
   // Hash passwords for seed users
-  const adminHash = await bcrypt.hash("admin123", 10);
-  const operatorHash = await bcrypt.hash("operator123", 10);
+  const staffHash = await bcrypt.hash("staff123", 10);
+  const supervisorHash = await bcrypt.hash("supervisor123", 10);
+  const maintenanceHash = await bcrypt.hash("maintenance123", 10);
 
   // Switch to the database
   await connection.query("USE chocolate_warehouse_db");
 
-  // Insert users with real password hashes
+  // Insert users with new roles
   await connection.query(
     `INSERT IGNORE INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
-    ["Admin", "admin@chocoloop.com", adminHash, "admin"]
+    ["John Staff", "staff@choco.com", staffHash, "warehouse_staff"]
   );
   await connection.query(
     `INSERT IGNORE INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
-    ["Operator", "operator@chocoloop.com", operatorHash, "operator"]
+    ["Sarah Supervisor", "supervisor@choco.com", supervisorHash, "warehouse_supervisor"]
   );
-  console.log("Users seeded (admin@chocoloop.com / admin123).");
+  await connection.query(
+    `INSERT IGNORE INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)`,
+    ["Mike Maintenance", "maintenance@choco.com", maintenanceHash, "maintenance_staff"]
+  );
+  console.log("Users seeded (staff@choco.com / staff123, supervisor@choco.com / supervisor123, maintenance@choco.com / maintenance123).");
 
   // Seed inventory items ONLY if they don't exist yet (preserves existing quantities)
   await connection.query(

@@ -386,6 +386,26 @@ def get_detections():
     return {"success": True, "data": []}, 200
 
 
+@app.route("/screenshot")
+def screenshot():
+    """Capture and return the latest frame as a JPEG image."""
+    global latest_frame_jpeg
+    
+    if not is_camera_running or latest_frame_jpeg is None:
+        return {"success": False, "error": "Camera not active"}, 503
+    
+    with frame_lock:
+        frame_data = latest_frame_jpeg
+    
+    if frame_data is None:
+        return {"success": False, "error": "No frame available"}, 503
+    
+    response = Response(frame_data, mimetype="image/jpeg")
+    response.headers['Content-Disposition'] = f'attachment; filename="screenshot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg"'
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
 VISION_PORT = int(os.getenv("VISION_PORT", "8001"))
 CAMERA_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "camera_config.json")
 

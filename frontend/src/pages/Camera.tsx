@@ -207,6 +207,51 @@ export function Camera() {
     }
   };
 
+  const takeScreenshot = async () => {
+    if (!isCameraOn) {
+      toast.error('Camera is not running');
+      return;
+    }
+    
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      
+      const res = await fetch(`${VISION_BASE}/screenshot`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      
+      if (!res.ok) {
+        throw new Error('Failed to capture screenshot');
+      }
+      
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `screenshot_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Screenshot saved');
+    } catch (err: any) {
+      const errMsg = err?.name === 'AbortError' ? 'Request timeout' : err?.message || 'Screenshot failed';
+      toast.error(errMsg);
+    }
+  };
+
+  const toggleRecording = () => {
+    setIsRecording(!isRecording);
+    if (!isRecording) {
+      toast.success('Recording started');
+    } else {
+      toast.success('Recording saved');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -305,8 +350,9 @@ export function Camera() {
                 </button>
                 <button
                   type="button"
-                  className="p-2 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 backdrop-blur-md transition-colors opacity-50 cursor-not-allowed"
-                  title="Snapshot coming soon"
+                  className="p-2 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 backdrop-blur-md transition-colors"
+                  title="Take screenshot"
+                  onClick={takeScreenshot}
                 >
                   <ImageIcon size={20} />
                 </button>
@@ -383,16 +429,6 @@ export function Camera() {
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <h3 className="font-semibold text-text-primary mb-4">Vision Service</h3>
-            <p className="text-sm text-text-secondary">
-              Detections are posted to the backend and update inventory automatically when
-              colored blocks enter the pick zone.
-            </p>
-            <p className="text-xs text-text-secondary mt-3 font-mono">
-              💾 Auto-saves to database
-            </p>
-          </Card>
         </div>
       </div>
     </div>

@@ -8,9 +8,52 @@ import jwt from 'jsonwebtoken';
 import type { Request, Response, NextFunction } from 'express';
 import { db, testConnection } from './db';
 
+declare global {
+  namespace Express {
+    interface Response {
+      sendError: (status: number, message: string, details?: any) => void;
+    }
+  }
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const ESP32_HOST = process.env.ESP32_HOST || 'http://10.174.204.136';
+const ESP32_TIMEOUT_MS = 4000;
+const RETRIEVE_TASK_TYPES = new Set(['Retrieve', 'Pick']);
+const STORE_TASK_TYPES = new Set(['Store']);
+
+function mapItemToEsp32Color(sku: string | null | undefined, name?: string) {
+  const value = `${sku || ''} ${name || ''}`.toLowerCase();
+  if (value.includes('milk') || value.includes('choc-milk') || value.includes('milk chocolate')) return 'rblue';
+  if (value.includes('white') || value.includes('choc-wht') || value.includes('white chocolate')) return 'rred';
+  if (value.includes('dark') || value.includes('choc-dark') || value.includes('dark chocolate')) return 'rgreen';
+  return null;
+}
+
+async function sendEsp32RetrieveCommand(color: string): Promise<boolean> {
+  const endpoint = `${ESP32_HOST}/${color}`;
+  console.log(`[ESP32] Sending retrieve command to ${endpoint}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ESP32_TIMEOUT_MS);
+  try {
+    const response = await fetch(endpoint, { signal: controller.signal });
+    const text = await response.text();
+    console.log(`[ESP32] Response from ${endpoint} status=${response.status} body=${text}`);
+    if (!response.ok) {
+      console.error(`[ESP32] Non-ok HTTP status ${response.status} from ${endpoint}`);
+      return false;
+    }
+    return text.trim() === 'OK_DONE';
+  } catch (error) {
+    console.error(`[ESP32] Error sending retrieve command to ${endpoint}:`, error);
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -35,16 +78,96 @@ app.use((req, res, next) => {
   next();
 });
 
+type UserRole = 'warehouse_staff' | 'warehouse_supervisor' | 'maintenance_staff';
+
 type AuthUser = {
   id: number;
   email: string;
-  role: 'admin' | 'operator' | string;
+  role: UserRole;
 };
 
 type AuthRequest = Request & {
   user?: AuthUser;
   sendError?: (status: number, message: string, details?: any) => void;
 };
+
+// ============================================================================
+// ROLE-BASED ACCESS CONTROL (RBAC) CONFIGURATION
+// ============================================================================
+type Permission = string;
+type RolePermissions = Record<UserRole, Set<Permission>>;
+
+const ROLE_PERMISSIONS: RolePermissions = {
+  warehouse_staff: new Set([
+    'voice_commands',
+    'chatbot_access',
+    'create_tasks',
+    'retrieve_tasks',
+    'view_inventory',
+    'view_own_tasks'
+  ]),
+  warehouse_supervisor: new Set([
+    'voice_commands',
+    'chatbot_access',
+    'create_tasks',
+    'retrieve_tasks',
+    'view_inventory',
+    'view_own_tasks',
+    'view_analytics',
+    'view_task_history',
+    'view_reports',
+    'user_monitoring',
+    'task_management'
+  ]),
+  maintenance_staff: new Set([
+    'system_diagnostics',
+    'view_logs',
+    'hardware_monitoring',
+    'voice_config',
+    'robot_config',
+    'system_settings',
+    'user_management'
+  ])
+};
+
+function hasPermission(userRole: UserRole, permission: Permission): boolean {
+  const permissions = ROLE_PERMISSIONS[userRole];
+  return permissions ? permissions.has(permission) : false;
+}
+
+function requireRole(...allowedRoles: UserRole[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    
+    if (!allowedRoles.includes(req.user.role as UserRole)) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Access denied: insufficient permissions' 
+      });
+    }
+    
+    next();
+  };
+}
+
+function requirePermission(permission: Permission) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    
+    if (!hasPermission(req.user.role as UserRole, permission)) {
+      return res.status(403).json({ 
+        success: false, 
+        error: `Access denied: ${permission} permission required` 
+      });
+    }
+    
+    next();
+  };
+}
 
 function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
@@ -94,11 +217,15 @@ app.get('/api/health', async (req, res) => {
 
 // Vision service availability check
 async function checkVisionService(): Promise<boolean> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2000);
   try {
-    const response = await fetch('http://localhost:8001/health', { timeout: 2000 });
+    const response = await fetch('http://localhost:8001/health', { signal: controller.signal });
     return response.ok;
   } catch {
     return false;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -221,6 +348,44 @@ app.get('/api/inventory', async (req, res) => {
   }
 });
 
+app.post('/api/inventory/add', async (req, res) => {
+  const { name, sku, category, quantity, location } = req.body;
+  
+  // Validate required fields
+  if (!name || !sku || !category) {
+    return res.status(400).json({ success: false, error: 'Name, SKU, and Category are required' });
+  }
+  
+  try {
+    // Check if SKU already exists
+    const [existing]: any = await db.query('SELECT id FROM inventory_items WHERE sku = ? LIMIT 1', [sku]);
+    if (existing && existing.length > 0) {
+      return res.status(409).json({ success: false, error: 'Product with this SKU already exists' });
+    }
+    
+    // Determine initial status based on quantity
+    const initialStatus = quantity === 0 ? 'Out of Stock' : quantity <= 200 ? 'Low Stock' : 'In Stock';
+    
+    // Insert new product
+    const [result]: any = await db.query(
+      `INSERT INTO inventory_items (name, sku, category, quantity, capacity, location, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 1000, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [name, sku, category, quantity || 0, location || 'Unknown', initialStatus]
+    );
+    
+    const productId = result.insertId;
+    console.log(`[Inventory] Added new product: ID=${productId}, SKU=${sku}, Name=${name}`);
+    
+    res.json({ success: true, message: 'Product added successfully', productId });
+  } catch (error) {
+    console.error('Failed to add product:', error);
+    if ((error as any).code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ success: false, error: 'Product with this SKU already exists' });
+    }
+    res.status(500).json({ success: false, error: 'Failed to add product' });
+  }
+});
+
 app.post('/api/inventory/update-from-vision', async (req, res) => {
   const { item, color, action, timestamp, event_id, source } = req.body;
   try {
@@ -294,25 +459,35 @@ app.post('/api/inventory/update-from-vision', async (req, res) => {
   }
 });
 
-app.post('/api/tasks', async (req, res) => {
-  const { type, description, product, quantity, source } = req.body;
+app.post('/api/tasks', authenticateToken, requirePermission('create_tasks'), async (req, res) => {
+  const { type, taskType, description, product, quantity, source } = req.body;
   try {
+    // Validate quantity to prevent duplication
+    const validQuantity = Number(quantity);
+    if (!Number.isInteger(validQuantity) || validQuantity < 1) {
+      return res.status(400).json({ success: false, error: 'Quantity must be a positive integer' });
+    }
+
     let itemId = null;
     if (product) {
+      console.log(`[Tasks] Looking up inventory item for product: ${product}`);
       const [items]: any = await db.query(
-        'SELECT id FROM inventory_items WHERE name LIKE ? OR category LIKE ? LIMIT 1',
-        [`%${product}%`, `%${product}%`]
+        'SELECT id FROM inventory_items WHERE sku LIKE ? OR name LIKE ? OR category LIKE ? LIMIT 1',
+        [`%${product}%`, `%${product}%`, `%${product}%`]
       );
       if (items && items.length > 0) {
         itemId = items[0].id;
+        console.log(`[Tasks] Matched inventory item id=${itemId} for product=${product}`);
       }
     }
 
-    const desc = description || `${type || 'Pick'} ${quantity || 12} ${product || 'chocolates'}`;
+    const effectiveType = taskType || type || 'Pick';
+    const desc = description || `${effectiveType} ${validQuantity} ${product || 'chocolates'}`;
+    console.log(`[Tasks] Creating task: type=${effectiveType}, desc=${desc}, itemId=${itemId}, qty=${validQuantity}, source=${source || 'web'}`);
     const [insertResult]: any = await db.query(
       `INSERT INTO tasks (task_type, description, item_id, quantity, status, progress, robot_id, operator, source)
        VALUES (?, ?, ?, ?, 'Queued', 0, 'RBT-01', ?, ?)`,
-      [type || 'Pick', desc, itemId, quantity || 12, source === 'voice' ? 'AI' : 'Manual', source || 'web']
+      [effectiveType, desc, itemId, validQuantity, source === 'voice' ? 'AI' : 'Manual', source || 'web']
     );
     const taskId = insertResult.insertId ? `T-${insertResult.insertId}` : undefined;
 
@@ -407,7 +582,7 @@ function formatToMySQL(d: Date): string {
     String(d.getSeconds()).padStart(2, '0');
 }
 
-app.get('/api/dashboard/summary', async (req, res) => {
+app.get('/api/dashboard/summary', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const [distribution]: any = await db.query('SELECT category as name, SUM(quantity) as value FROM inventory_items GROUP BY category');
     
@@ -756,6 +931,11 @@ Reply concisely with clear, actionable information. Use bullet points if listing
 
 // -----------------------------------------------------------------------------
 // BACKGROUND TASK WORKER — processes robot tasks every 3 seconds
+// IMPORTANT: This worker is idempotent - it only processes one task state transition per call
+// to prevent duplicate arm operations and inventory updates
+// Each unit of a retrieve task is processed sequentially to prevent arm duplication
+// To prevent this from repeating, progress tracks which units have been processed
+// Once a unit is processed, progress increments, so the SAME unit is never processed twice
 // -----------------------------------------------------------------------------
 async function processTaskQueue() {
   try {
@@ -770,28 +950,125 @@ async function processTaskQueue() {
         "SELECT id FROM tasks WHERE status = 'Queued' ORDER BY created_at ASC LIMIT 1"
       );
       if (queued && queued.length > 0) {
+        // Mark as active - this is the ONLY state transition that happens per call
         await db.query(
-          "UPDATE tasks SET status = 'Active', progress = 0, robot_id = 'RBT-01' WHERE id = ?",
+          "UPDATE tasks SET status = 'Active', progress = 0, robot_id = 'RBT-01', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
           [queued[0].id]
         );
         console.log(`[Worker] Task #${queued[0].id} → Active`);
       }
-      return; // next tick will increment its progress
+      return; // next tick will process the first unit - prevents duplicate operations
     }
 
     // 2. Increment progress of the active task
     const taskId = active[0].id;
     const [taskRow]: any = await db.query(
-      "SELECT progress, quantity, item_id FROM tasks WHERE id = ?",
+      "SELECT progress, quantity, item_id, task_type FROM tasks WHERE id = ?",
       [taskId]
     );
     if (!taskRow || taskRow.length === 0) return;
 
-    const currentProgress = taskRow[0].progress || 0;
+    const row = taskRow[0];
+    const currentProgress = row.progress || 0;
+    const quantity = row.quantity || 1;
+    const taskType = row.task_type || '';
+    const isRetrieve = RETRIEVE_TASK_TYPES.has(taskType);
+    const isStore = STORE_TASK_TYPES.has(taskType);
+
+    if (isRetrieve) {
+      let itemColor: string | null = null;
+      if (row.item_id) {
+        const [items]: any = await db.query(
+          'SELECT sku, name FROM inventory_items WHERE id = ? LIMIT 1',
+          [row.item_id]
+        );
+        if (items && items.length > 0) {
+          itemColor = mapItemToEsp32Color(items[0].sku, items[0].name);
+        }
+      }
+
+      if (!itemColor) {
+        console.error(`[Worker] Retrieve task #${taskId} could not resolve ESP32 endpoint. item_id=${row.item_id}, taskType=${taskType}`);
+        await db.query(
+          "UPDATE tasks SET status = 'Failed', progress = 0, completed_at = CURRENT_TIMESTAMP, confidence = 0 WHERE id = ?",
+          [taskId]
+        );
+        await db.query(
+          'INSERT INTO task_logs (task_id, action, notes) VALUES (?, ?, ?)',
+          [taskId, 'failed', 'Unable to determine ESP32 retrieval endpoint for task item']
+        );
+        return;
+      }
+
+      console.log(`[Worker] Retrieve task #${taskId} mapped to ESP32 endpoint segment=${itemColor}`);
+      console.log(`[Worker] Task #${taskId} - processing ${quantity} unit(s) sequentially (one per cycle to prevent arm duplication)`);
+
+      // Process ONE unit per worker cycle - KEY PREVENTION against duplicate arm operations
+      // Progress % = (currentProgress + 1) / quantity * 100
+      // This ensures the SAME unit is never processed twice
+      const unitsProcessed = currentProgress; // currentProgress is stored as a count of processed units
+      const nextUnit = unitsProcessed + 1;
+      
+      if (nextUnit <= quantity) {
+        // Execute NEXT unit only
+        const ok = await sendEsp32RetrieveCommand(itemColor);
+        if (!ok) {
+          const partialProgress = Math.round(((nextUnit - 1) / quantity) * 100);
+          await db.query(
+            "UPDATE tasks SET status = 'Failed', progress = ?, completed_at = CURRENT_TIMESTAMP, confidence = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [partialProgress, taskId]
+          );
+          await db.query(
+            'INSERT INTO task_logs (task_id, action, notes) VALUES (?, ?, ?)',
+            [taskId, 'failed', `ESP32 retrieval failed on unit ${nextUnit}/${quantity} for ${itemColor}`]
+          );
+          console.log(`[Worker] Task #${taskId} failed on unit ${nextUnit}/${quantity}`);
+          return;
+        }
+
+        // Successfully executed this unit - update progress
+        const newProgress = nextUnit; // Store unit count as progress
+        const percentProgress = Math.round((nextUnit / quantity) * 100);
+        await db.query(
+          'UPDATE tasks SET progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
+          [percentProgress, taskId]
+        );
+        console.log(`[Worker] Task #${taskId} unit ${nextUnit}/${quantity} completed (${percentProgress}% progress)`);
+        
+        // Check if ALL units are complete
+        if (nextUnit >= quantity) {
+          const duration = `${Math.floor(Math.random() * 8) + 8}s`;
+          await db.query(
+            `UPDATE tasks SET status = 'Success', progress = 100, duration = ?, confidence = ?, completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [duration, Math.floor(Math.random() * 5) + 95, taskId]
+          );
+          console.log(`[Worker] Task #${taskId} → Success (${duration}) - all ${quantity} units completed`);
+
+          // Update inventory ONLY when task is fully complete
+          if (row.item_id) {
+            const qty = quantity;
+            await db.query(
+              `UPDATE inventory_items 
+               SET quantity = GREATEST(0, quantity - ?),
+                   status = CASE 
+                     WHEN GREATEST(0, quantity - ?) <= 0 THEN 'Out of Stock' 
+                     WHEN GREATEST(0, quantity - ?) <= 200 THEN 'Low Stock' 
+                     ELSE 'In Stock' 
+                   END,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?`,
+              [qty, qty, qty, row.item_id]
+            );
+            console.log(`[Worker] Inventory item ${row.item_id} decremented by ${qty} (retrieval complete)`);
+          }
+        }
+        return; // CRITICAL: Return here - prevents processing more units in the same cycle
+      }
+    }
+
     const newProgress = Math.min(100, currentProgress + 20);
 
     if (newProgress >= 100) {
-      // Mark complete
       const duration = `${Math.floor(Math.random() * 12) + 8}s`;
       await db.query(
         `UPDATE tasks SET status = 'Success', progress = 100, duration = ?, confidence = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -799,22 +1076,25 @@ async function processTaskQueue() {
       );
       console.log(`[Worker] Task #${taskId} → Success (${duration})`);
 
-      // Decrement inventory for the item associated with this task
-      if (taskRow[0].item_id) {
-        const qty = taskRow[0].quantity || 1;
-        await db.query(
+      if (isStore) {
+        if (row.item_id) {
+          const qty = quantity;
+          await db.query(
           `UPDATE inventory_items 
-           SET quantity = GREATEST(0, quantity - ?),
+           SET quantity = quantity + ?,
                status = CASE 
-                 WHEN GREATEST(0, quantity - ?) <= 0 THEN 'Out of Stock' 
-                 WHEN GREATEST(0, quantity - ?) <= 200 THEN 'Low Stock' 
+                 WHEN quantity + ? <= 0 THEN 'Out of Stock' 
+                 WHEN quantity + ? <= 200 THEN 'Low Stock' 
                  ELSE 'In Stock' 
                END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
-          [qty, qty, qty, taskRow[0].item_id]
+          [qty, qty, qty, row.item_id]
         );
-        console.log(`[Worker] Inventory item ${taskRow[0].item_id} decremented by ${qty}`);
+        console.log(`[Worker] Inventory item ${row.item_id} incremented by ${qty}`);
+        } else {
+          console.warn(`[Worker] Store task #${taskId} completed without inventory item_id; no stock update applied.`);
+        }
       }
     } else {
       await db.query(

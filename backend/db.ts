@@ -16,8 +16,6 @@ export const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelayMs: 30000
 });
 
 // Test connection and implement retry logic
@@ -42,15 +40,15 @@ export async function testConnection(): Promise<boolean> {
 }
 
 // Handle pool errors
-db.on('error', (err) => {
+;(db as any).on('error', (err: any) => {
   console.error('[DB Pool Error]:', err);
-  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+  if (err?.code === 'PROTOCOL_CONNECTION_LOST') {
     console.error('[DB] Connection lost, will reconnect on next request');
   }
-  if (err.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR') {
+  if (err?.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR') {
     console.error('[DB] Fatal error, recreating pool');
   }
-  if (err.code === 'PROTOCOL_ENQUEUE_AFTER_RETIRE') {
+  if (err?.code === 'PROTOCOL_ENQUEUE_AFTER_RETIRE') {
     console.error('[DB] Connection retired');
   }
 });

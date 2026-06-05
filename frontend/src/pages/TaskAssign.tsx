@@ -28,13 +28,15 @@ export function TaskAssign() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [textFallback, setTextFallback] = useState('');
   const [voiceReplies, setVoiceReplies] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [manualForm, setManualForm] = useState({
-    type: 'Pick',
+    type: 'Retrieve',
     product: '',
-    source: '',
+    quantity: 1,
     dest: '',
     priority: 'Normal'
   });
+  const [manualError, setManualError] = useState('');
   const { inventoryData } = useInventory();
   const { activeTasks } = useTasksActive();
   const {
@@ -89,25 +91,38 @@ export function TaskAssign() {
   };
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent duplicate submission
+    
+    setManualError('');
+    const quantity = Number(manualForm.quantity);
+    if (!quantity || !Number.isInteger(quantity) || quantity < 1) {
+      setManualError('Quantity is required and must be a whole number of 1 or more.');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       await createTask({
+        taskType: manualForm.type,
         type: manualForm.type,
-        description: `${manualForm.type} ${manualForm.product || 'items'}${manualForm.source ? ' from ' + manualForm.source : ''}${manualForm.dest ? ' → ' + manualForm.dest : ''}`,
+        description: `${manualForm.type} ${manualForm.product || 'items'} x${quantity}`,
         product: manualForm.product,
-        quantity: 12,
-        source: 'web',
+        quantity,
       });
-      toast.success('Task assigned to robot — check the queue!');
-    } catch {
+      toast.success(`Task assigned — ${quantity} unit(s) of ${manualForm.product || 'items'} queued for ${manualForm.type}`);
+      setManualForm({
+        type: 'Retrieve',
+        product: '',
+        quantity: 1,
+        dest: '',
+        priority: 'Normal'
+      });
+    } catch (error) {
+      console.error('Task creation error:', error);
       toast.error('Failed to create task');
+    } finally {
+      setIsSubmitting(false);
     }
-    setManualForm({
-      type: 'Pick',
-      product: '',
-      source: '',
-      dest: '',
-      priority: 'Normal'
-    });
   };
   const exampleCommands = [
     'Start the conveyor',
@@ -147,17 +162,13 @@ export function TaskAssign() {
                 className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                 value={manualForm.type}
                 onChange={(e) =>
-                setManualForm({
-                  ...manualForm,
-                  type: e.target.value
-                })
+                  setManualForm({
+                    ...manualForm,
+                    type: e.target.value
+                  })
                 }>
-                
-                <option>Pick</option>
-                <option>Sort</option>
-                <option>Pack</option>
-                <option>Move</option>
                 <option>Retrieve</option>
+                <option>Store</option>
               </select>
             </div>
 
@@ -184,21 +195,32 @@ export function TaskAssign() {
               </datalist>
             </div>
 
-            <Input
-              label="Source Bin"
-              placeholder="e.g. A-01"
-              value={manualForm.source}
-              onChange={(e) =>
-                setManualForm({
-                  ...manualForm,
-                  source: e.target.value
-                })
-              }
-            />
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Quantity
+              </label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter quantity"
+                value={manualForm.quantity}
+                onChange={(e) =>
+                  setManualForm({
+                    ...manualForm,
+                    quantity: Number(e.target.value)
+                  })
+                }
+              />
+              {manualError && (
+                <p className="mt-2 text-sm text-status-danger">{manualError}</p>
+              )}
+            </div>
 
             <div className="pt-4 border-t border-border">
-              <Button type="submit" className="w-full">
-                Assign to Robot
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating task...' : 'Assign Task'}
               </Button>
             </div>
           </form>

@@ -58,19 +58,25 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     };
 
     recognition.onerror = (event: any) => {
+      console.error('[Speech Recognition] Error:', event.error);
       if (event.error === 'no-speech') {
         setError('No speech detected. Please try again.');
       } else if (event.error === 'not-allowed') {
         setError(
-          'Microphone access denied. Enable it in your browser settings.'
+          'Microphone access denied. Please allow microphone in browser permissions and reload the page.'
         );
+      } else if (event.error === 'network') {
+        setError('Network error. Please check your internet connection.');
+      } else if (event.error === 'audio-capture') {
+        setError('No microphone found. Please connect a microphone and try again.');
       } else {
-        setError(`Recognition error: ${event.error}`);
+        setError(`Recognition error: ${event.error}. Please try again.`);
       }
       setIsListening(false);
     };
 
     recognition.onend = () => {
+      console.log('[Speech Recognition] Session ended');
       setIsListening(false);
       setInterimTranscript('');
     };
@@ -88,26 +94,33 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
   const startListening = useCallback(() => {
     if (!isSupported || !recognitionRef.current) {
-      setError('Voice recognition is not supported in this browser.');
+      const msg = 'Voice recognition is not supported in this browser.';
+      console.error('[Speech Recognition]', msg);
+      setError(msg);
       return;
     }
     setError(null);
+    setTranscript('');
     setInterimTranscript('');
+    console.log('[Speech Recognition] Starting...');
     try {
       recognitionRef.current.start();
       setIsListening(true);
     } catch (e) {
-
+      console.error('[Speech Recognition] Start error:', e);
       // start() throws if already started — ignore
-    }}, [isSupported]);
+    }
+  }, [isSupported]);
 
   const stopListening = useCallback(() => {
+    console.log('[Speech Recognition] Stopping...');
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {
-
-        /* noop */}
+        console.error('[Speech Recognition] Stop error:', e);
+        /* noop */
+      }
     }
     setIsListening(false);
   }, []);

@@ -6,8 +6,10 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255),
   email VARCHAR(255) UNIQUE,
   password_hash VARCHAR(255),
-  role ENUM('admin','operator') DEFAULT 'operator',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  role ENUM('warehouse_staff','warehouse_supervisor','maintenance_staff') DEFAULT 'warehouse_staff',
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS inventory_items (
