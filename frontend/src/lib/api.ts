@@ -47,7 +47,7 @@ export async function isApiReachable(force = false): Promise<boolean> {
     lastCheck = now;
     if (!offlineWarned) {
       console.warn(
-        '[ChocoLoop] API offline at localhost:5000 — start backend: cd backend & npm run dev'
+        '[ChocoLoop] API offline at localhost:5000 — start backend: cd backend && npm run dev'
       );
       offlineWarned = true;
     }

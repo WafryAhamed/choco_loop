@@ -22,6 +22,7 @@ export function Chatbot() {
     text: "Hi! I'm the Cacao Assistant. Ask me about stock, today's summary, tasks, or system health."
   }]
   );
+  const [hasError, setHasError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const {
     isListening,
@@ -61,19 +62,33 @@ export function Chatbot() {
     );
     setInput('');
     setIsTyping(true);
+    setHasError(false);
     setTimeout(
       async () => {
-        const reply = await getAssistantReply(trimmed);
-        setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          text: reply.text
-        }]
-        );
+        try {
+          const reply = await getAssistantReply(trimmed);
+          setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: reply.text
+          }]
+          );
+          setHasError(false);
+          // Read the reply aloud
+          speak(reply.text);
+        } catch (error) {
+          console.error('Chatbot error:', error);
+          setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: 'I encountered an issue processing your request. The backend may be offline. Please ensure the backend is running on port 5000.'
+          }]
+          );
+          setHasError(true);
+        }
         setIsTyping(false);
-        // Read the reply aloud
-        speak(reply.text);
       },
       700 + Math.random() * 500
     );

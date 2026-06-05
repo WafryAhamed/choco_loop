@@ -16,10 +16,46 @@ const VISION_BASE = 'http://localhost:8001';
 export function Camera() {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [cameraOk, setCameraOk] = useState(false);
+  const [cameraType, setCameraType] = useState<'usb' | 'laptop' | 'unknown'>('unknown');
   const [lastError, setLastError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [recentDetections, setRecentDetections] = useState<any[]>([]);
+  const [cameraAvailable, setCameraAvailable] = useState<boolean | null>(null);
+
+  // Auto-detect camera type and availability
+  useEffect(() => {
+    const detectCamera = async () => {
+      try {
+        // Check for user media constraints to detect available cameras
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoCameras = devices.filter(d => d.kind === 'videoinput');
+        
+        if (videoCameras.length > 1) {
+          setCameraType('usb'); // USB camera detected if more than one camera
+          setCameraAvailable(true);
+        } else if (videoCameras.length === 1) {
+          setCameraType('laptop');
+          setCameraAvailable(true);
+        } else {
+          setCameraType('unknown');
+          setCameraAvailable(false);
+          setLastError('No camera devices detected');
+        }
+      } catch (err) {
+        console.warn('Camera detection error:', err);
+        setCameraAvailable(false);
+      }
+    };
+
+    detectCamera();
+
+    // Listen for device changes (USB camera plugin/eject)
+    navigator.mediaDevices.addEventListener('devicechange', detectCamera);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', detectCamera);
+    };
+  }, []);
 
   useEffect(() => {
     const pollStatus = () => {
@@ -32,7 +68,9 @@ export function Camera() {
             setLastError(data.data.lastError || null);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          setLastError('Vision service unavailable on port 8001');
+        });
     };
     pollStatus();
     const id = setInterval(pollStatus, 3000);
@@ -216,26 +254,41 @@ export function Camera() {
           <Card>
             <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
               <CameraIcon size={18} className="text-primary" />
-              Camera Power
+              Camera Configuration
             </h3>
-            <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-surface">
-              <div>
-                <p className="font-medium text-text-primary">Master Switch</p>
-                <p className="text-xs text-text-secondary">Starts vision on port 8001</p>
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg border border-border bg-surface">
+                <p className="text-xs text-text-secondary mb-1">Detected Camera</p>
+                <p className="font-medium text-text-primary">
+                  {cameraType === 'usb' && '📷 USB Camera (External)'}
+                  {cameraType === 'laptop' && '💻 Built-in Camera (Laptop)'}
+                  {cameraType === 'unknown' && '❓ No Camera Detected'}
+                </p>
+                <p className="text-xs text-text-secondary mt-1">
+                  {cameraAvailable === true && 'Camera device available'}
+                  {cameraAvailable === false && 'Connect a USB camera or enable laptop camera in settings'}
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={toggleCamera}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  isCameraOn ? 'bg-status-success' : 'bg-status-danger'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isCameraOn ? 'translate-x-6' : 'translate-x-1'
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-surface">
+                <div>
+                  <p className="font-medium text-text-primary">Master Switch</p>
+                  <p className="text-xs text-text-secondary">Starts vision on port 8001</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleCamera}
+                  disabled={cameraAvailable === false}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isCameraOn ? 'bg-status-success' : cameraAvailable === false ? 'bg-gray-400' : 'bg-status-danger'
                   }`}
-                />
-              </button>
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isCameraOn ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </Card>
 
