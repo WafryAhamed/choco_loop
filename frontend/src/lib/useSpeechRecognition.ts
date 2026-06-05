@@ -58,19 +58,38 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     };
 
     recognition.onerror = (event: any) => {
+<<<<<<< HEAD
+=======
+      console.error('[Speech Recognition] Error:', event.error);
+>>>>>>> fix-camera
       if (event.error === 'no-speech') {
         setError('No speech detected. Please try again.');
       } else if (event.error === 'not-allowed') {
         setError(
+<<<<<<< HEAD
           'Microphone access denied. Enable it in your browser settings.'
         );
       } else {
         setError(`Recognition error: ${event.error}`);
+=======
+          'Microphone access denied. Please allow microphone in browser permissions and reload the page.'
+        );
+      } else if (event.error === 'network') {
+        setError('Network error. Please check your internet connection.');
+      } else if (event.error === 'audio-capture') {
+        setError('No microphone found. Please connect a microphone and try again.');
+      } else {
+        setError(`Recognition error: ${event.error}. Please try again.`);
+>>>>>>> fix-camera
       }
       setIsListening(false);
     };
 
     recognition.onend = () => {
+<<<<<<< HEAD
+=======
+      console.log('[Speech Recognition] Session ended');
+>>>>>>> fix-camera
       setIsListening(false);
       setInterimTranscript('');
     };
@@ -88,26 +107,54 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
   const startListening = useCallback(() => {
     if (!isSupported || !recognitionRef.current) {
+<<<<<<< HEAD
       setError('Voice recognition is not supported in this browser.');
       return;
     }
     setError(null);
     setInterimTranscript('');
+=======
+      const msg = 'Voice recognition is not supported in this browser.';
+      console.error('[Speech Recognition]', msg);
+      setError(msg);
+      return;
+    }
+    setError(null);
+    setTranscript('');
+    setInterimTranscript('');
+    console.log('[Speech Recognition] Starting...');
+>>>>>>> fix-camera
     try {
       recognitionRef.current.start();
       setIsListening(true);
     } catch (e) {
+<<<<<<< HEAD
 
       // start() throws if already started — ignore
     }}, [isSupported]);
 
   const stopListening = useCallback(() => {
+=======
+      console.error('[Speech Recognition] Start error:', e);
+      // start() throws if already started — ignore
+    }
+  }, [isSupported]);
+
+  const stopListening = useCallback(() => {
+    console.log('[Speech Recognition] Stopping...');
+>>>>>>> fix-camera
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (e) {
+<<<<<<< HEAD
 
         /* noop */}
+=======
+        console.error('[Speech Recognition] Stop error:', e);
+        /* noop */
+      }
+>>>>>>> fix-camera
     }
     setIsListening(false);
   }, []);

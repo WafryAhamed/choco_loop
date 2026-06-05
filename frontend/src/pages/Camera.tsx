@@ -12,15 +12,24 @@ import { toast } from 'sonner';
 import { API_BASE, isApiReachable, markApiOffline, isFetchNetworkError } from '../lib/api';
 
 const VISION_BASE = 'http://localhost:8001';
+<<<<<<< HEAD
+=======
+const CAMERA_MODE_STORAGE_KEY = 'choco_camera_mode';
+type CameraMode = 'internal' | 'external' | 'off';
+>>>>>>> fix-camera
 
 export function Camera() {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [cameraOk, setCameraOk] = useState(false);
+<<<<<<< HEAD
   const [cameraType, setCameraType] = useState<'usb' | 'laptop' | 'unknown'>('unknown');
+=======
+>>>>>>> fix-camera
   const [lastError, setLastError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [recentDetections, setRecentDetections] = useState<any[]>([]);
+<<<<<<< HEAD
   const [cameraAvailable, setCameraAvailable] = useState<boolean | null>(null);
 
   // Auto-detect camera type and availability
@@ -55,6 +64,121 @@ export function Camera() {
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', detectCamera);
     };
+=======
+  const [selectedCameraMode, setSelectedCameraMode] = useState<CameraMode>('external');
+  const [isApplyingCameraMode, setIsApplyingCameraMode] = useState(false);
+
+  const getCameraIndexForMode = (mode: CameraMode) => {
+    if (mode === 'internal') return 0;
+    if (mode === 'external') return 1;
+    return null;
+  };
+
+  const getCameraStatusLabel = () => {
+    if (selectedCameraMode === 'internal') return 'Internal Camera Active';
+    if (selectedCameraMode === 'external') return 'External Camera Active';
+    return 'Camera OFF';
+  };
+
+  const stopVisionCamera = async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const res = await fetch(`${VISION_BASE}/stop`, {
+      method: 'POST',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error || 'Failed to stop camera');
+    }
+  };
+
+  const startVisionCamera = async (mode: CameraMode) => {
+    const cameraIndex = getCameraIndexForMode(mode);
+    if (cameraIndex === null) {
+      throw new Error('Invalid camera mode');
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const res = await fetch(`${VISION_BASE}/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ camera_index: cameraIndex }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.success === false) {
+      throw new Error(data?.error || 'Failed to start camera');
+    }
+  };
+
+  const applyCameraMode = async (mode: CameraMode) => {
+    setSelectedCameraMode(mode);
+    window.localStorage.setItem(CAMERA_MODE_STORAGE_KEY, mode);
+    setIsApplyingCameraMode(true);
+    setLastError(null);
+
+    if (mode === 'off') {
+      try {
+        await stopVisionCamera();
+        setIsCameraOn(false);
+        setCameraOk(false);
+      } catch (err: any) {
+        setLastError(err?.message || 'Failed to stop camera');
+      } finally {
+        setIsApplyingCameraMode(false);
+      }
+      return;
+    }
+
+    try {
+      await stopVisionCamera();
+    } catch (err: any) {
+      setLastError(err?.message || 'Failed to stop previous camera');
+      setIsCameraOn(false);
+      setCameraOk(false);
+      setIsApplyingCameraMode(false);
+      return;
+    }
+
+    try {
+      await startVisionCamera(mode);
+      setIsCameraOn(true);
+      setCameraOk(true);
+      setLastError(null);
+    } catch (err: any) {
+      setIsCameraOn(false);
+      setCameraOk(false);
+      setLastError(err?.message || 'Failed to start camera');
+    } finally {
+      setIsApplyingCameraMode(false);
+    }
+  };
+
+  // Auto-start camera when page loads
+  useEffect(() => {
+    const savedMode = window.localStorage.getItem(CAMERA_MODE_STORAGE_KEY) as CameraMode | null;
+    const initialMode: CameraMode = savedMode === 'internal' || savedMode === 'external' || savedMode === 'off' ? savedMode : 'external';
+    setSelectedCameraMode(initialMode);
+
+    const autoStartCamera = async () => {
+      console.log('[Camera] Auto-starting camera using last selected mode...', initialMode);
+      await applyCameraMode(initialMode);
+    };
+
+    autoStartCamera();
+>>>>>>> fix-camera
   }, []);
 
   useEffect(() => {
@@ -97,6 +221,7 @@ export function Camera() {
   }, []);
 
   const toggleCamera = async () => {
+<<<<<<< HEAD
     const wantOn = !isCameraOn;
     setIsCameraOn(wantOn);
     try {
@@ -113,6 +238,80 @@ export function Camera() {
     } catch {
       setIsCameraOn(!wantOn);
       setLastError('Vision service unreachable on port 8001');
+=======
+    // Camera is now auto-managed by backend
+    // This function kept for emergency manual control if needed
+    const wantOn = !isCameraOn;
+    setIsCameraOn(wantOn);
+    console.log(`[Camera] Manual toggle camera ${wantOn ? 'ON' : 'OFF'}...`);
+    
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      
+      const res = await fetch(`${VISION_BASE}/${wantOn ? 'start' : 'stop'}`, {
+        method: 'POST',
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      
+      const data = await res.json();
+      if (!res.ok || data?.success === false) {
+        setIsCameraOn(!wantOn);
+        setLastError(data?.error || `Camera ${wantOn ? 'start' : 'stop'} failed`);
+      } else {
+        setLastError(null);
+      }
+    } catch (err: any) {
+      setIsCameraOn(!wantOn);
+      const errMsg = err?.name === 'AbortError' ? 'Request timeout' : 'Vision service unreachable';
+      setLastError(errMsg);
+    }
+  };
+
+  const takeScreenshot = async () => {
+    if (!isCameraOn) {
+      toast.error('Camera is not running');
+      return;
+    }
+    
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      
+      const res = await fetch(`${VISION_BASE}/screenshot`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      
+      if (!res.ok) {
+        throw new Error('Failed to capture screenshot');
+      }
+      
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `screenshot_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Screenshot saved');
+    } catch (err: any) {
+      const errMsg = err?.name === 'AbortError' ? 'Request timeout' : err?.message || 'Screenshot failed';
+      toast.error(errMsg);
+    }
+  };
+
+  const toggleRecording = () => {
+    setIsRecording(!isRecording);
+    if (!isRecording) {
+      toast.success('Recording started');
+    } else {
+      toast.success('Recording saved');
+>>>>>>> fix-camera
     }
   };
 
@@ -144,8 +343,13 @@ export function Camera() {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-text-secondary bg-black/90">
                 <CameraIcon size={48} className="mb-4 opacity-50" />
+<<<<<<< HEAD
                 <p className="text-xl font-medium">Camera Offline</p>
                 <p className="text-sm opacity-75">Enable the master switch to start the feed</p>
+=======
+                <p className="text-xl font-medium">Camera Starting...</p>
+                <p className="text-sm opacity-75">Waiting for external USB camera</p>
+>>>>>>> fix-camera
               </div>
             )}
 
@@ -166,6 +370,16 @@ export function Camera() {
                 <span className="text-white/90 font-mono text-sm bg-black/40 px-2 py-1 rounded backdrop-blur-sm">
                   Conveyor-Cam-01
                 </span>
+<<<<<<< HEAD
+=======
+                {isCameraOn && cameraOk && (
+                  <span className="text-sm text-green-300 bg-black/40 px-3 py-1 rounded ml-3 font-medium">
+                    {selectedCameraMode === 'internal'
+                      ? 'Internal Camera Active (Index 0)'
+                      : 'External Camera Active (Index 1)'}
+                  </span>
+                )}
+>>>>>>> fix-camera
               </div>
               <div className="flex gap-3 text-white/80 font-mono text-xs bg-black/40 px-3 py-1.5 rounded backdrop-blur-sm border border-white/10">
                 <span>{cameraOk ? '640×480' : 'No signal'}</span>
@@ -199,8 +413,22 @@ export function Camera() {
                 </button>
                 <button
                   type="button"
+<<<<<<< HEAD
                   className="p-2 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 backdrop-blur-md transition-colors opacity-50 cursor-not-allowed"
                   title="Snapshot coming soon"
+=======
+                  className={`p-2 rounded-full backdrop-blur-md border transition-colors ${isCameraOn ? 'bg-status-success/20 border-status-success text-status-success' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
+                  onClick={toggleCamera}
+                  title={isCameraOn ? 'Stop camera' : 'Start camera'}
+                >
+                  <CameraIcon size={20} />
+                </button>
+                <button
+                  type="button"
+                  className="p-2 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 backdrop-blur-md transition-colors"
+                  title="Take screenshot"
+                  onClick={takeScreenshot}
+>>>>>>> fix-camera
                 >
                   <ImageIcon size={20} />
                 </button>
@@ -215,6 +443,35 @@ export function Camera() {
             </div>
           </div>
 
+<<<<<<< HEAD
+=======
+          <div className="mt-4 rounded-3xl border border-border bg-surface p-4">
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { key: 'internal', label: 'Internal Camera' },
+                  { key: 'external', label: 'External Camera' },
+                  { key: 'off', label: 'Camera OFF' },
+                ] as Array<{ key: CameraMode; label: string }>
+              ).map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  disabled={isApplyingCameraMode}
+                  onClick={() => applyCameraMode(option.key)}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors border ${selectedCameraMode === option.key ? 'bg-primary text-white border-primary' : 'bg-white/5 text-text-secondary border-white/10 hover:bg-white/10'} ${isApplyingCameraMode ? 'opacity-60 cursor-not-allowed' : ''}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 text-sm text-text-secondary">
+              <span className="font-semibold text-text-primary">Status:</span> {getCameraStatusLabel()}
+              {isApplyingCameraMode && <span className="ml-2 text-xs text-text-secondary">(Applying selection...)</span>}
+            </div>
+          </div>
+
+>>>>>>> fix-camera
           <Card>
             <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
               <Settings2 size={18} className="text-primary" />
@@ -251,6 +508,7 @@ export function Camera() {
         </div>
 
         <div className="space-y-6">
+<<<<<<< HEAD
           <Card>
             <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
               <CameraIcon size={18} className="text-primary" />
@@ -302,6 +560,8 @@ export function Camera() {
               ESP32: configure IP in vision/stream_server.py
             </p>
           </Card>
+=======
+>>>>>>> fix-camera
         </div>
       </div>
     </div>

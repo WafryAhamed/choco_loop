@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+<<<<<<< HEAD
 import { Search, Filter, Download, Plus, AlertTriangle, X } from 'lucide-react';
+=======
+import { Search, Filter, Download, Plus, AlertTriangle, X, Check } from 'lucide-react';
+>>>>>>> fix-camera
 import {
   PieChart,
   Pie,
@@ -16,24 +20,105 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { StatusPill } from '../components/ui/StatusPill';
 import { useInventory, useDashboardSummary } from '../lib/useApi';
+<<<<<<< HEAD
+=======
+import { API_BASE } from '../lib/api';
+
+>>>>>>> fix-camera
 export function Inventory() {
   const navigate = useNavigate();
   const { inventoryData, loading } = useInventory();
   const { inventoryDistribution } = useDashboardSummary();
   const [searchTerm, setSearchTerm] = useState('');
+<<<<<<< HEAD
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   if (loading) return <div>Loading...</div>;
   // Summary Stats
+=======
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [addFormData, setAddFormData] = useState({
+    name: '',
+    sku: '',
+    category: '',
+    stock: 0,
+    bin: ''
+  });
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  
+  if (loading) return <div>Loading...</div>;
+  
+  // Get unique categories from inventory
+  const categories = Array.from(new Set(inventoryData.map(item => item.category))).sort();
+  
+  // Filter inventory data based on search term and selected category
+  const filteredInventoryData = inventoryData.filter(item => {
+    const matchesSearch = !searchTerm || 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = !selectedCategory || item.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+  
+  // Summary Stats (calculated from ALL data, not filtered)
+>>>>>>> fix-camera
   const totalSKUs = inventoryData.length;
   const inStock = inventoryData.filter((i) => i.status === 'In Stock').length;
   const lowStock = inventoryData.filter((i) => i.status === 'Low Stock').length;
   const outOfStock = inventoryData.filter(
     (i) => i.status === 'Out of Stock'
   ).length;
+<<<<<<< HEAD
   const lowStockItems = inventoryData.filter(
     (i) => i.status === 'Low Stock' || i.status === 'Out of Stock'
   );
+=======
+  const lowStockItems = filteredInventoryData.filter(
+    (i) => i.status === 'Low Stock' || i.status === 'Out of Stock'
+  );
+  
+  // Handle Add Product
+  const handleAddProduct = async () => {
+    if (!addFormData.name.trim() || !addFormData.sku.trim() || !addFormData.category.trim()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    setIsAddingProduct(true);
+    try {
+      const response = await fetch(`${API_BASE}/inventory/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: addFormData.name,
+          sku: addFormData.sku,
+          category: addFormData.category,
+          quantity: addFormData.stock,
+          location: addFormData.bin || 'Unknown'
+        })
+      });
+      
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toast.success(`Product "${addFormData.name}" added successfully`);
+        setAddFormData({ name: '', sku: '', category: '', stock: 0, bin: '' });
+        setIsAddModalOpen(false);
+      } else {
+        toast.error(result.error || 'Failed to add product');
+      }
+    } catch (error) {
+      console.error('Error adding product:', error);
+      toast.error('Failed to add product');
+    } finally {
+      setIsAddingProduct(false);
+    }
+  };
+>>>>>>> fix-camera
 
   const handleExport = () => {
     if (!inventoryData || inventoryData.length === 0) return;
@@ -148,9 +233,50 @@ export function Inventory() {
                   onChange={(e) => setSearchTerm(e.target.value)} />
                 
               </div>
+<<<<<<< HEAD
               <Button variant="outline" className="flex gap-2 w-full sm:w-auto">
                 <Filter size={18} /> Category
               </Button>
+=======
+              <div className="relative">
+                <Button 
+                  variant="outline" 
+                  className="flex gap-2 w-full sm:w-auto"
+                  onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}>
+                  <Filter size={18} /> 
+                  {selectedCategory ? selectedCategory : 'Category'}
+                  {selectedCategory && <X size={14} />}
+                </Button>
+                {isCategoryMenuOpen && (
+                  <div className="absolute top-full mt-2 right-0 bg-surface border border-border rounded-lg shadow-lg z-10 min-w-48">
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          setSelectedCategory(null);
+                          setIsCategoryMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded hover:bg-hover/50 text-sm text-text-primary">
+                        All Categories
+                      </button>
+                      {categories.map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => {
+                            setSelectedCategory(cat);
+                            setIsCategoryMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded text-sm flex items-center justify-between ${
+                            selectedCategory === cat ? 'bg-primary/20 text-primary' : 'hover:bg-hover/50 text-text-primary'
+                          }`}>
+                          {cat}
+                          {selectedCategory === cat && <Check size={16} />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+>>>>>>> fix-camera
             </div>
 
             <div className="overflow-x-auto">
@@ -165,6 +291,7 @@ export function Inventory() {
                   </tr>
                 </thead>
                 <tbody>
+<<<<<<< HEAD
                   {inventoryData.map((item, index) => {
                     const stockPercent = item.stock / item.capacity * 100;
                     let progressColor = 'bg-status-success';
@@ -225,6 +352,76 @@ export function Inventory() {
                       </motion.tr>);
 
                   })}
+=======
+                  {filteredInventoryData.length > 0 ? (
+                    filteredInventoryData.map((item, index) => {
+                      const stockPercent = item.stock / item.capacity * 100;
+                      let progressColor = 'bg-status-success';
+                      if (stockPercent < 20) progressColor = 'bg-status-danger';else
+                      if (stockPercent < 50)
+                      progressColor = 'bg-status-warning';
+                      return (
+                        <motion.tr
+                          key={item.id}
+                          initial={{
+                            opacity: 0,
+                            y: 10
+                          }}
+                          animate={{
+                            opacity: 1,
+                            y: 0
+                          }}
+                          transition={{
+                            delay: index * 0.05
+                          }}
+                          className="border-b border-border/50 hover:bg-hover/50 transition-colors group">
+                          
+                          <td className="py-4 px-2">
+                            <p className="font-medium text-text-primary">
+                              {item.name}
+                            </p>
+                            <p className="text-xs text-text-secondary">
+                              {item.category}
+                            </p>
+                          </td>
+                          <td className="py-4 px-2 text-sm font-mono text-text-secondary">
+                            {item.sku}
+                          </td>
+                          <td className="py-4 px-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-medium text-text-primary">
+                                {item.stock}
+                              </span>
+                              <span className="text-xs text-text-secondary">
+                                / {item.capacity}
+                              </span>
+                            </div>
+                            <div className="w-24 h-1.5 bg-surface rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${progressColor}`}
+                                style={{
+                                  width: `${stockPercent}%`
+                                }}>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-2 text-sm text-text-secondary">
+                            {item.bin}
+                          </td>
+                          <td className="py-4 px-2">
+                            <StatusPill status={item.status} />
+                          </td>
+                        </motion.tr>);
+
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-text-secondary">
+                        No products found matching your search or filter.
+                      </td>
+                    </tr>
+                  )}
+>>>>>>> fix-camera
                 </tbody>
               </table>
             </div>
@@ -331,6 +528,7 @@ export function Inventory() {
               </button>
             </div>
             <div className="p-4 space-y-4">
+<<<<<<< HEAD
               <Input label="Product Name" placeholder="e.g. Milk Chocolate" />
               <div className="grid grid-cols-2 gap-4">
                 <Input label="SKU" placeholder="e.g. CHOC-01" />
@@ -351,6 +549,80 @@ export function Inventory() {
                   );
                 }}>
                 Save Product
+=======
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">Product Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Milk Chocolate"
+                  className="w-full bg-hover border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={addFormData.name}
+                  onChange={(e) => setAddFormData({...addFormData, name: e.target.value})}
+                  disabled={isAddingProduct}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">SKU *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. CHOC-01"
+                    className="w-full bg-hover border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={addFormData.sku}
+                    onChange={(e) => setAddFormData({...addFormData, sku: e.target.value})}
+                    disabled={isAddingProduct}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Category *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Milk"
+                    className="w-full bg-hover border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={addFormData.category}
+                    onChange={(e) => setAddFormData({...addFormData, category: e.target.value})}
+                    disabled={isAddingProduct}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Initial Stock</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    min="0"
+                    className="w-full bg-hover border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={addFormData.stock}
+                    onChange={(e) => setAddFormData({...addFormData, stock: parseInt(e.target.value) || 0})}
+                    disabled={isAddingProduct}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Location (Bin)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. BIN-A"
+                    className="w-full bg-hover border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={addFormData.bin}
+                    onChange={(e) => setAddFormData({...addFormData, bin: e.target.value})}
+                    disabled={isAddingProduct}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-border flex justify-end gap-3 bg-background/50">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAddModalOpen(false)}
+                disabled={isAddingProduct}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddProduct}
+                disabled={isAddingProduct}>
+                {isAddingProduct ? 'Saving...' : 'Save Product'}
+>>>>>>> fix-camera
               </Button>
             </div>
           </motion.div>

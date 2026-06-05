@@ -8,15 +8,62 @@ import threading
 import time
 from datetime import datetime
 from uuid import uuid4
+<<<<<<< HEAD
 from flask import Flask, Response
 from flask_cors import CORS
+=======
+from flask import Flask, Response, request
+from flask_cors import CORS
+import json
+import sys
+try:
+    # Python and Flask version logging at startup
+    import importlib.metadata as importlib_metadata
+except Exception:
+    import importlib_metadata
+
+>>>>>>> fix-camera
 
 ESP_IP = "10.174.204.136"
 NODE_BACKEND_URL = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
 VISION_UPDATE_URL = f"{NODE_BACKEND_URL}/api/inventory/update-from-vision"
 
 app = Flask(__name__)
+<<<<<<< HEAD
 CORS(app)
+=======
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": "*", "expose_headers": "*"}})
+
+# Startup environment info (will help debug runtime issues)
+try:
+    py_ver = sys.version.replace("\n", " ")
+except Exception:
+    py_ver = str(sys.version)
+
+try:
+    flask_ver = importlib_metadata.version("flask")
+except Exception:
+    try:
+        import flask
+        flask_ver = getattr(flask, "__version__", "unknown")
+    except Exception:
+        flask_ver = "unknown"
+
+print(f"[Vision] Startup - Python: {py_ver}")
+print(f"[Vision] Startup - Flask: {flask_ver}")
+
+# Ensure proper CORS headers on all responses
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Content-Length'
+    # For video_feed, allow embedding in img tags
+    if 'multipart' in response.content_type:
+        response.headers['Cross-Origin-Resource-Policy'] = 'cross-origin'
+    return response
+>>>>>>> fix-camera
 
 busy = False
 conveyor_running = False
@@ -35,6 +82,7 @@ frame_lock = threading.Lock()
 camera_lock = threading.Lock()
 video = None
 
+<<<<<<< HEAD
 
 def open_camera():
     """
@@ -70,11 +118,92 @@ def open_camera():
     print("[Vision]   No external camera found. Trying laptop webcam (index 0)...")
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     if cap.isOpened():
+=======
+# ESP32 Configuration
+ESP32_AVAILABLE = False
+ESP32_ERROR_LOGGED = False  # Only log ESP32 errors once
+
+
+def open_camera(preferred_index=None):
+    """
+    Robust camera selection with persistence.
+
+    Selection strategy:
+      1. Use the requested preferred_index if provided.
+      2. Otherwise use the saved preferred index from camera_config.json.
+      3. If no saved index exists, default to external USB camera at index 1.
+
+    Saves the selected camera index and simple properties to camera_config.json
+    so selection persists across restarts.
+    """
+    print("[Vision] 🔍 Detecting camera...")
+
+    cfg = load_camera_config()
+    if preferred_index is None:
+        preferred_index = cfg.get("preferred_index", 1)
+    else:
+        try:
+            preferred_index = int(preferred_index)
+        except Exception:
+            preferred_index = cfg.get("preferred_index", 1)
+
+    chosen = preferred_index
+    camera_label = "Internal Laptop Camera" if chosen == 0 else "External USB Camera"
+    print(f"[Vision] 🔁 Attempting to open {camera_label} at index {chosen} using CAP_DSHOW")
+
+    try:
+        cap = cv2.VideoCapture(chosen, cv2.CAP_DSHOW)
+    except Exception as e:
+        print(f"[Vision][ERROR] Exception while creating VideoCapture({chosen}): {e}")
+        return None
+
+    try:
+        is_opened = cap.isOpened() if cap is not None else False
+        print(f"[Vision][DEBUG] cv2.VideoCapture({chosen}) -> cap.isOpened(): {is_opened}")
+    except Exception as e:
+        print(f"[Vision][ERROR] Failed to query cap.isOpened(): {e}")
+
+    if not cap or not cap.isOpened():
+        try:
+            print(f"[Vision][DEBUG] Camera {chosen} properties: width={cap.get(cv2.CAP_PROP_FRAME_WIDTH) if cap is not None else 'N/A'}, height={cap.get(cv2.CAP_PROP_FRAME_HEIGHT) if cap is not None else 'N/A'}, fps={cap.get(cv2.CAP_PROP_FPS) if cap is not None else 'N/A'}")
+        except Exception:
+            pass
+        try:
+            if cap is not None:
+                cap.release()
+        except Exception:
+            pass
+        print(f"[Vision] ❌ Failed to open {camera_label} at index {chosen}. See debug logs above.")
+        return None
+
+    # Try to read a frame immediately to ensure the camera is delivering data
+    try:
+        ret, _ = cap.read()
+    except Exception as e:
+        print(f"[Vision][ERROR] Exception while reading from camera {chosen}: {e}")
+        try:
+            cap.release()
+        except Exception:
+            pass
+        return None
+
+    if not ret:
+        print(f"[Vision] ❌ {camera_label} at index {chosen} opened but failed to read frames (ret={ret})")
+        try:
+            cap.release()
+        except Exception:
+            pass
+        return None
+
+    # Configure camera parameters
+    try:
+>>>>>>> fix-camera
         cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         cap.set(cv2.CAP_PROP_FPS, 30)
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+<<<<<<< HEAD
         ret, test_frame = cap.read()
         if ret and test_frame is not None:
             print("[Vision] [WARN] Using LAPTOP built-in webcam (index 0) -- no external camera detected")
@@ -87,20 +216,55 @@ def open_camera():
 
     print("[Vision] [ERROR] No working camera found (tried external 1-5, then laptop 0)")
     return None
+=======
+    except Exception as e:
+        print(f"[Vision][WARN] Failed to set some camera properties: {e}")
+
+    props = get_camera_properties(cap)
+    print(f"[Vision] ✅ {camera_label} Connected and Active (Index {chosen}) -> {props}")
+
+    # Persist the chosen camera index
+    try:
+        cfg.update({"preferred_index": int(chosen), "last_selected": time.time(), "props": props})
+        save_camera_config(cfg)
+    except Exception as e:
+        print(f"[Vision][WARN] Failed to persist camera config: {e}")
+
+    print(f"[Vision] 🔧 Selected camera source: {camera_label} (Index {chosen})")
+
+    return cap
+>>>>>>> fix-camera
 
 
 def send_request(url):
     """Send conveyor start/stop command to ESP32."""
+<<<<<<< HEAD
     try:
         response = requests.get(url, timeout=10)
         if response.text == "OK_DONE":
             print("ESP32 DONE")
     except Exception as e:
         print("ESP ERROR:", e)
+=======
+    global ESP32_AVAILABLE, ESP32_ERROR_LOGGED
+    try:
+        response = requests.get(url, timeout=3)  # Shorter timeout
+        if response.text == "OK_DONE":
+            print("ESP32 DONE")
+            ESP32_AVAILABLE = True
+    except Exception as e:
+        # Only log ESP32 errors once to keep console clean
+        if not ESP32_ERROR_LOGGED:
+            print("[Vision] ⚠️  ESP32 not available - conveyor control disabled")
+            print(f"[Vision] → Connect ESP32 or ignore this warning if testing without hardware")
+            ESP32_ERROR_LOGGED = True
+        ESP32_AVAILABLE = False
+>>>>>>> fix-camera
 
 
 def send_pick_request(url):
     """Send pick command to ESP32 and release busy flag when done."""
+<<<<<<< HEAD
     global busy
     try:
         response = requests.get(url, timeout=10)
@@ -108,6 +272,20 @@ def send_pick_request(url):
             print("ESP32 PICK DONE")
     except Exception as e:
         print("ESP PICK ERROR:", e)
+=======
+    global busy, ESP32_AVAILABLE, ESP32_ERROR_LOGGED
+    try:
+        response = requests.get(url, timeout=3)  # Shorter timeout
+        if response.text == "OK_DONE":
+            print("ESP32 PICK DONE")
+            ESP32_AVAILABLE = True
+    except Exception as e:
+        # Only log once
+        if not ESP32_ERROR_LOGGED:
+            print("[Vision] ⚠️  ESP32 not available - pick control disabled")
+            ESP32_ERROR_LOGGED = True
+        ESP32_AVAILABLE = False
+>>>>>>> fix-camera
     finally:
         busy = False
 
@@ -168,7 +346,21 @@ def generate_web_frames():
 def video_feed():
     if not is_camera_running:
         return {"success": False, "error": "Camera is stopped"}, 503
+<<<<<<< HEAD
     return Response(generate_web_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
+=======
+    
+    response = Response(generate_web_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
+    
+    # Explicitly set CORS and security headers
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = '*'
+    response.headers['Cross-Origin-Resource-Policy'] = 'cross-origin'
+    response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
+    
+    return response
+>>>>>>> fix-camera
 
 
 @app.route("/health")
@@ -206,10 +398,39 @@ def start_camera():
                 pass
             video = None
 
+<<<<<<< HEAD
         cap = open_camera()
         if cap is None:
             is_camera_running = False
             last_error = "Camera not available"
+=======
+        request_json = request.get_json(silent=True) or {}
+        camera_index = request_json.get('camera_index')
+        if camera_index is None:
+            query_index = request.args.get('camera_index')
+            if query_index is not None:
+                try:
+                    camera_index = int(query_index)
+                except Exception:
+                    camera_index = None
+
+        cap = open_camera(camera_index)
+        if cap is None:
+            is_camera_running = False
+            if camera_index == 0:
+                last_error = "❌ Internal camera not detected. Please connect or enable your laptop camera."
+            else:
+                last_error = "❌ External USB camera not detected. Please connect the USB camera."
+            print(f"[Vision] ERROR: {last_error}")
+            return {"success": False, "error": last_error, "data": {"started": False}}, 503
+
+        # VALIDATION: Ensure camera is actually opened and working
+        if not cap.isOpened():
+            is_camera_running = False
+            last_error = "❌ Camera failed to open"
+            cap.release()
+            print(f"[Vision] ERROR: {last_error}")
+>>>>>>> fix-camera
             return {"success": False, "error": last_error, "data": {"started": False}}, 503
 
         video = cap
@@ -222,6 +443,12 @@ def start_camera():
         last_error = None
         with frame_lock:
             latest_frame_jpeg = None
+<<<<<<< HEAD
+=======
+        
+        print("[Vision] ✅ Camera started successfully")
+        print("[Vision] ✓ Video stream is active and ready")
+>>>>>>> fix-camera
 
     return {"success": True, "data": {"started": True}}, 200
 
@@ -254,7 +481,84 @@ def get_detections():
     return {"success": True, "data": []}, 200
 
 
+<<<<<<< HEAD
 VISION_PORT = int(os.getenv("VISION_PORT", "8001"))
+=======
+@app.route("/screenshot")
+def screenshot():
+    """Capture and return the latest frame as a JPEG image."""
+    global latest_frame_jpeg
+    
+    if not is_camera_running or latest_frame_jpeg is None:
+        return {"success": False, "error": "Camera not active"}, 503
+    
+    with frame_lock:
+        frame_data = latest_frame_jpeg
+    
+    if frame_data is None:
+        return {"success": False, "error": "No frame available"}, 503
+    
+    response = Response(frame_data, mimetype="image/jpeg")
+    response.headers['Content-Disposition'] = f'attachment; filename="screenshot_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg"'
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
+VISION_PORT = int(os.getenv("VISION_PORT", "8001"))
+CAMERA_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "camera_config.json")
+
+
+def load_camera_config():
+    try:
+        if os.path.exists(CAMERA_CONFIG_PATH):
+            with open(CAMERA_CONFIG_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def save_camera_config(cfg: dict):
+    try:
+        with open(CAMERA_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception:
+        pass
+
+
+def enumerate_working_cameras(max_index: int = 10):
+    """Try to open external camera indices 1..max_index and return a list of working indices."""
+    working = []
+    for idx in range(1, max_index + 1):
+        cap = None
+        try:
+            cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+            if not cap or not cap.isOpened():
+                continue
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            ret, _ = cap.read()
+            if ret:
+                working.append(idx)
+        except Exception:
+            pass
+        finally:
+            try:
+                if cap is not None:
+                    cap.release()
+            except Exception:
+                pass
+    return working
+
+
+def get_camera_properties(cap):
+    try:
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        fps = int(cap.get(cv2.CAP_PROP_FPS) or 0)
+        return {"width": w, "height": h, "fps": fps}
+    except Exception:
+        return {"width": 0, "height": 0, "fps": 0}
+>>>>>>> fix-camera
 
 
 def run_web_server():
@@ -267,8 +571,41 @@ def run_web_server():
 
 
 def start_server_and_loop():
+<<<<<<< HEAD
     """Start the web server in a background thread, then enter the camera processing loop."""
     threading.Thread(target=run_web_server, daemon=True).start()
+=======
+    """Start the web server in a background thread, then auto-start camera and enter the camera processing loop."""
+    global ESP32_AVAILABLE
+    
+    threading.Thread(target=run_web_server, daemon=True).start()
+    
+    # Auto-start camera when service starts
+    time.sleep(1)  # Give web server time to initialize
+    
+    print("[Vision] Auto-starting camera...")
+    
+    # Test ESP32 connectivity
+    try:
+        response = requests.get(f"http://{ESP_IP}/status", timeout=2)
+        ESP32_AVAILABLE = True
+        print("[Vision] ✅ ESP32 Connected - Conveyor control ENABLED")
+    except:
+        ESP32_AVAILABLE = False
+        print("[Vision] ⚠️  ESP32 Not Connected - Running in CAMERA-ONLY mode")
+        print("[Vision]    (Camera detection and video feed will work normally)")
+    
+    # Simulate /start POST request
+    global is_camera_running, video
+    with camera_lock:
+        cap = open_camera()
+        if cap is not None:
+            video = cap
+            is_camera_running = True
+            print("[Vision] ✅ External USB camera auto-started successfully")
+        else:
+            print("[Vision] ⚠️ Failed to auto-start external USB camera - will retry in loop")
+>>>>>>> fix-camera
     camera_loop()
 
 def camera_loop():
@@ -276,11 +613,25 @@ def camera_loop():
     global video, last_error, busy, conveyor_running, object_in_zone, ready_for_next
     global last_pick_time, latest_frame_jpeg, frame_id
 
+<<<<<<< HEAD
     while True:
+=======
+    print("[Vision] " + "="*60)
+    print("[Vision] CAMERA LOOP STARTED")
+    print("[Vision] Continuous camera detection: External cameras only, no laptop fallback")
+    print("[Vision] Will automatically reconnect if an external camera connects")
+    print("[Vision] " + "="*60)
+
+    reconnect_attempts = 0
+    
+    while True:
+        # Check if camera service is running
+>>>>>>> fix-camera
         if not is_camera_running:
             time.sleep(0.03)
             continue
 
+<<<<<<< HEAD
         if video is None or not video.isOpened():
             with camera_lock:
                 if video is None or not video.isOpened():
@@ -294,6 +645,37 @@ def camera_loop():
         if not ret:
             last_error = "Camera frame read failed"
             time.sleep(0.05)
+=======
+        # If camera is not available, try to reconnect
+        if video is None or not video.isOpened():
+            with camera_lock:
+                if video is None or not video.isOpened():
+                    reconnect_attempts += 1
+                    print(f"[Vision] 🔄 Reconnect attempt #{reconnect_attempts}")
+                    print("[Vision] Detecting external USB camera only...")
+                    
+                    video = open_camera()
+                    
+            if video is None:
+                last_error = "❌ No camera available - retrying..."
+                print(f"[Vision] {last_error}")
+                time.sleep(1)  # Wait before retry
+                continue
+            else:
+                reconnect_attempts = 0
+                print("[Vision] ✅ Camera reconnected!")
+
+        # Read frame from camera
+        ret, frame = video.read()
+        if not ret:
+            last_error = "Camera frame read failed - will reconnect"
+            print(f"[Vision] {last_error}")
+            with camera_lock:
+                if video is not None:
+                    video.release()
+                video = None
+            time.sleep(0.5)
+>>>>>>> fix-camera
             continue
 
         current_time = time.time()

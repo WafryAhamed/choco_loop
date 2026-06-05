@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 DROP DATABASE IF EXISTS chocolate_warehouse_db;
 CREATE DATABASE chocolate_warehouse_db;
+=======
+CREATE DATABASE IF NOT EXISTS chocolate_warehouse_db;
+>>>>>>> fix-camera
 USE chocolate_warehouse_db;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -7,14 +11,25 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255),
   email VARCHAR(255) UNIQUE,
   password_hash VARCHAR(255),
+<<<<<<< HEAD
   role ENUM('admin','operator') DEFAULT 'operator',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+=======
+  role ENUM('warehouse_staff','warehouse_supervisor','maintenance_staff') DEFAULT 'warehouse_staff',
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+>>>>>>> fix-camera
 );
 
 CREATE TABLE IF NOT EXISTS inventory_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255),
+<<<<<<< HEAD
   sku VARCHAR(100),
+=======
+  sku VARCHAR(100) UNIQUE,
+>>>>>>> fix-camera
   category VARCHAR(100),
   quantity INT DEFAULT 0,
   capacity INT DEFAULT 1000,

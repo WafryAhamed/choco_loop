@@ -1,4 +1,14 @@
 import { API_BASE } from './api';
+<<<<<<< HEAD
+=======
+import { 
+  processNLP, 
+  generateVoiceFeedback, 
+  generateChatbotResponse,
+  type NLPResult,
+  type Product
+} from './nlpEngine';
+>>>>>>> fix-camera
 
 const VISION_BASE = 'http://localhost:8001';
 
@@ -8,6 +18,10 @@ export interface ParsedCommand {
     | 'sort'
     | 'pack'
     | 'move'
+<<<<<<< HEAD
+=======
+    | 'store'
+>>>>>>> fix-camera
     | 'check_inventory'
     | 'stock_count'
     | 'pause'
@@ -128,6 +142,11 @@ export function parseCommandIntent(rawText: string): ParsedCommand {
     intent = 'start_station';
   } else if (/\b(move|transfer|relocate)\b/.test(text)) {
     intent = 'move';
+<<<<<<< HEAD
+=======
+  } else if (/\b(store|put away|restock|stock up|stock)\b/.test(text)) {
+    intent = 'store';
+>>>>>>> fix-camera
   } else if (/\b(queue\s+pick|pick\s+\d+|pick|grab|retrieve|get)\b/.test(text)) {
     intent = 'pick';
   } else if (/\b(sort|organize|separate)\b/.test(text)) {
@@ -165,17 +184,41 @@ async function fetchSystemHealth(): Promise<any[]> {
   return data.systemHealth || [];
 }
 
+<<<<<<< HEAD
+=======
+function findInventoryItem(items: any[], product?: string): any | undefined {
+  if (!product) return undefined;
+  const normalized = product.toLowerCase();
+  return items.find(
+    (item) =>
+      item.name?.toLowerCase().includes(normalized) ||
+      item.category?.toLowerCase().includes(normalized) ||
+      item.sku?.toLowerCase() === normalized ||
+      item.sku?.toLowerCase().includes(normalized)
+  );
+}
+
+>>>>>>> fix-camera
 async function postTask(
   type: string,
   description: string,
   product?: string,
+<<<<<<< HEAD
   quantity?: number
+=======
+  quantity?: number,
+  taskType?: string
+>>>>>>> fix-camera
 ): Promise<string | undefined> {
   const res = await fetch(`${API_BASE}/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       type,
+<<<<<<< HEAD
+=======
+      taskType: taskType || type,
+>>>>>>> fix-camera
       description,
       product,
       quantity: quantity ?? 12,
@@ -206,6 +249,7 @@ function formatInventorySummary(items: any[]): string {
 
 /** Run parsed intent against real backend / vision services. */
 export async function executeVoiceCommand(rawText: string): Promise<CommandResult> {
+<<<<<<< HEAD
   const parsed = parseCommandIntent(rawText);
   const qty = parsed.quantity ?? 12;
 
@@ -370,6 +414,10 @@ export async function executeVoiceCommand(rawText: string): Promise<CommandResul
       toast: { type: 'error', message: msg },
     };
   }
+=======
+  // Use the new NLP-based command execution
+  return executeNLPCommand(rawText);
+>>>>>>> fix-camera
 }
 
 /** @deprecated Use parseCommandIntent + executeVoiceCommand */
@@ -381,3 +429,215 @@ export function parseCommand(rawText: string): CommandResult {
     toast: { type: 'info', message: 'Parsing only' },
   };
 }
+<<<<<<< HEAD
+=======
+
+/**
+ * Enhanced NLP-based voice command execution
+ * Uses processNLP for flexible natural language understanding
+ */
+export async function executeNLPCommand(rawText: string): Promise<CommandResult> {
+  try {
+    // Fetch available products for fuzzy matching
+    const inventoryData = await fetchInventory();
+    const products: Product[] = inventoryData.map((item: any) => ({
+      id: item.id || item.sku,
+      name: item.name,
+      quantity: item.stock || item.quantity || 0,
+      category: item.category,
+      sku: item.sku,
+    }));
+
+    // Process input through NLP engine
+    const nlpResult = processNLP(rawText, products);
+
+    // Log NLP result for debugging
+    console.log('[Voice] NLP Result:', {
+      intent: nlpResult.intent,
+      product: nlpResult.entities.product,
+      quantity: nlpResult.entities.quantity,
+      errors: nlpResult.validationErrors
+    });
+
+    // Validate NLP result
+    if (nlpResult.validationErrors.length > 0 && nlpResult.intent !== 'UNKNOWN') {
+      console.warn('[Voice] Validation errors:', nlpResult.validationErrors);
+    }
+
+    // Execute based on intent
+    switch (nlpResult.intent) {
+      case 'STORE': {
+        if (nlpResult.validationErrors.length > 0) {
+          return {
+            parsed: { intent: 'store', rawText },
+            reply: `Cannot store items: ${nlpResult.validationErrors.join(', ')}. Please specify a product and quantity.`,
+            toast: { type: 'error', message: nlpResult.validationErrors[0] || 'Missing information' },
+          };
+        }
+
+        if (!nlpResult.entities.product || !nlpResult.entities.quantity) {
+          return {
+            parsed: { intent: 'store', rawText },
+            reply: 'I need a product name and quantity to store items. For example: "Store 5 Milk Chocolates"',
+            toast: { type: 'error', message: 'Invalid store command' },
+          };
+        }
+
+        // Create store task
+        const storeTaskId = await postTask(
+          'Store',
+          `Store ${nlpResult.entities.quantity} ${nlpResult.entities.product}`,
+          nlpResult.entities.product,
+          nlpResult.entities.quantity,
+          'Store'
+        );
+
+        const reply = generateVoiceFeedback(nlpResult, true);
+        return {
+          parsed: { 
+            intent: 'store', 
+            rawText, 
+            product: nlpResult.entities.product, 
+            quantity: nlpResult.entities.quantity 
+          },
+          reply,
+          taskId: storeTaskId,
+          toast: { type: 'success', message: `Stored ${nlpResult.entities.quantity} ${nlpResult.entities.product}` },
+        };
+      }
+
+      case 'RETRIEVE': {
+        if (nlpResult.validationErrors.length > 0) {
+          return {
+            parsed: { intent: 'pick', rawText },
+            reply: `Cannot retrieve items: ${nlpResult.validationErrors.join(', ')}. Please specify a product and quantity.`,
+            toast: { type: 'error', message: nlpResult.validationErrors[0] || 'Missing information' },
+          };
+        }
+
+        if (!nlpResult.entities.product || !nlpResult.entities.quantity) {
+          return {
+            parsed: { intent: 'pick', rawText },
+            reply: 'I need a product name and quantity to retrieve items. For example: "Retrieve 5 Milk Chocolates"',
+            toast: { type: 'error', message: 'Invalid retrieve command' },
+          };
+        }
+
+        // Check availability
+        const productMatch = inventoryData.find(
+          (item: any) => item.name.toLowerCase() === nlpResult.entities.product?.toLowerCase()
+        );
+
+        console.log('[Voice] Product match for retrieve:', {
+          requested: nlpResult.entities.product,
+          found: productMatch?.name,
+          availableStock: productMatch?.stock
+        });
+
+        if (!productMatch) {
+          const reply = generateVoiceFeedback(nlpResult, false, 'product not found');
+          return {
+            parsed: { 
+              intent: 'pick', 
+              rawText, 
+              product: nlpResult.entities.product, 
+              quantity: nlpResult.entities.quantity 
+            },
+            reply,
+            toast: { type: 'error', message: `${nlpResult.entities.product} not found in inventory` },
+          };
+        }
+
+        if (productMatch.stock < nlpResult.entities.quantity) {
+          const reply = generateVoiceFeedback(
+            nlpResult,
+            false,
+            `insufficient stock - only ${productMatch.stock} available`
+          );
+          return {
+            parsed: { 
+              intent: 'pick', 
+              rawText, 
+              product: nlpResult.entities.product, 
+              quantity: nlpResult.entities.quantity 
+            },
+            reply,
+            toast: { type: 'error', message: `Insufficient stock. Available: ${productMatch.stock}` },
+          };
+        }
+
+        // Create retrieve task
+        const retrieveTaskId = await postTask(
+          'Retrieve',
+          `Retrieve ${nlpResult.entities.quantity} ${nlpResult.entities.product}`,
+          nlpResult.entities.product,
+          nlpResult.entities.quantity,
+          'Retrieve'
+        );
+
+        const reply = generateVoiceFeedback(nlpResult, true);
+        return {
+          parsed: { 
+            intent: 'pick', 
+            rawText, 
+            product: nlpResult.entities.product, 
+            quantity: nlpResult.entities.quantity 
+          },
+          reply,
+          taskId: retrieveTaskId,
+          toast: { type: 'success', message: `Retrieving ${nlpResult.entities.quantity} ${nlpResult.entities.product}` },
+        };
+      }
+
+      case 'INVENTORY_CHECK': {
+        const reply = `Checking inventory${nlpResult.entities.product ? ` for ${nlpResult.entities.product}` : ''}...`;
+        return {
+          parsed: { intent: 'check_inventory', rawText },
+          reply,
+          toast: { type: 'info', message: 'Checking inventory...' },
+        };
+      }
+
+      case 'TASK_STATUS': {
+        return {
+          parsed: { intent: 'active_tasks', rawText },
+          reply: 'Displaying active tasks...',
+          toast: { type: 'info', message: 'Loading tasks...' },
+        };
+      }
+
+      case 'ROBOT_STATUS': {
+        return {
+          parsed: { intent: 'system_status', rawText },
+          reply: 'Checking robot status...',
+          toast: { type: 'info', message: 'Loading robot status...' },
+        };
+      }
+
+      case 'HELP': {
+        const reply = generateVoiceFeedback(nlpResult, true);
+        return {
+          parsed: { intent: 'unknown', rawText },
+          reply,
+          toast: { type: 'info', message: 'Help displayed' },
+        };
+      }
+
+      default: {
+        return {
+          parsed: { intent: 'unknown', rawText },
+          reply: 'I did not understand that command. Try: "Store 5 Milk Chocolates", "Retrieve 10 Dark Chocolates", or "Show inventory"',
+          toast: { type: 'error', message: 'Command not recognized' },
+        };
+      }
+    }
+  } catch (error) {
+    console.error('[Voice] Error executing NLP command:', error);
+    return {
+      parsed: { intent: 'unknown', rawText: rawText },
+      reply: 'An error occurred processing your command. Please try again.',
+      toast: { type: 'error', message: 'Execution error' },
+    };
+  }
+}
+>>>>>>> fix-camera

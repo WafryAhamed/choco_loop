@@ -3,11 +3,19 @@ import { API_BASE, isApiReachable, markApiOffline, isFetchNetworkError } from '.
 
 /** POST a new task to the backend */
 export async function createTask(payload: {
+<<<<<<< HEAD
+=======
+  taskType?: string;
+>>>>>>> fix-camera
   type: string;
   description?: string;
   product?: string;
   quantity?: number;
+<<<<<<< HEAD
   source?: string;
+=======
+  assignedRobot?: string;
+>>>>>>> fix-camera
 }) {
   const res = await fetch(`${API_BASE}/tasks`, {
     method: 'POST',

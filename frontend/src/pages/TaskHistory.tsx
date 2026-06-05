@@ -23,9 +23,38 @@ export function TaskHistory() {
   const { taskHistory } = useTasksHistory();
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('All');
+<<<<<<< HEAD
   const filteredHistory = taskHistory.filter((task) =>
   statusFilter === 'All' ? true : task.status === statusFilter
   );
+=======
+  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
+  const [taskTypeFilter, setTaskTypeFilter] = useState('All Types');
+  
+  const filteredHistory = taskHistory.filter((task) => {
+    // Status filter
+    const matchesStatus = statusFilter === 'All' || task.status === statusFilter;
+    
+    // Date filter
+    const taskDate = new Date(task.timestamp).toISOString().split('T')[0];
+    const matchesDate = !dateFilter || taskDate === dateFilter;
+    
+    // Task type filter
+    const taskTypeMap: Record<string, string> = {
+      'Retrieve': 'Retrieve',
+      'Store': 'Place',
+      'Sort': 'Sort',
+      'Pack': 'Pack'
+    };
+    const matchesTaskType = taskTypeFilter === 'All Types' || 
+      task.description.includes(taskTypeFilter) ||
+      Object.keys(taskTypeMap).some(key => 
+        taskTypeMap[key] === taskTypeFilter && task.description.includes(key)
+      );
+    
+    return matchesStatus && matchesDate && matchesTaskType;
+  });
+>>>>>>> fix-camera
   const successCount = taskHistory.filter((t) => t.status === 'Success').length;
   const failCount = taskHistory.length - successCount;
   const successRate = Math.round(successCount / taskHistory.length * 100);
@@ -65,7 +94,12 @@ export function TaskHistory() {
                 label="Date Range"
                 type="date"
                 icon={<Calendar size={18} />}
+<<<<<<< HEAD
                 defaultValue={new Date().toISOString().split('T')[0]} />
+=======
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)} />
+>>>>>>> fix-camera
               
             </div>
             <div className="flex-1 min-w-[150px]">
@@ -86,7 +120,14 @@ export function TaskHistory() {
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
                 Task Type
               </label>
+<<<<<<< HEAD
               <select className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary">
+=======
+              <select 
+                className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                value={taskTypeFilter}
+                onChange={(e) => setTaskTypeFilter(e.target.value)}>
+>>>>>>> fix-camera
                 <option>All Types</option>
                 <option>Place</option>
                 <option>Retrieve</option>
