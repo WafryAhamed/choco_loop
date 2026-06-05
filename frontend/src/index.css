@@ -1,0 +1,103 @@
+/* @import url() FONT IMPORTS MUST ALWAYS BE AT THE VERY TOP OF THIS FILE, ABOVE THE TAILWIND IMPORTS — DO NOT DELETE THIS COMMENT */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
+/* CRITICAL: THE FOLLOWING TAILWIND IMPORTS MUST NEVER BE DELETED OR REORDERED — DO NOT DELETE THIS COMMENT */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+
+@layer base {
+  :root {
+    --background: #F8F4EE;
+    --surface: #FFFFFF;
+    --card: #FFFFFF;
+    --primary: #6B3E26;
+    --primary-dark: #4A2C24;
+    --secondary: #C98B4A;
+    --accent: #D97732;
+    --text-primary: #241612;
+    --text-secondary: #5A463F;
+    --border: #E8D9C5;
+    --hover: #F1E2D0;
+    --sidebar: #4A2C24;
+    --sidebar-text: #E5D1B0;
+    --sidebar-active: #D97732;
+    --sidebar-hover: #8C5523;
+    --chart-1: #6B3E26;
+    --chart-2: #C98B4A;
+    --chart-3: #D97732;
+    --chart-grid: #E8D9C5;
+    --success: #22C55E;
+    --warning: #F59E0B;
+    --danger: #DC2626;
+    --info: #3B82F6;
+    --neutral: #64748B;
+  }
+  .dark {
+    --background: #140F0D;
+    --surface: #1E1714;
+    --card: #2A1F1A;
+    --primary: #C98B4A;
+    --primary-dark: #A86D36;
+    --secondary: #D97732;
+    --accent: #E5D1B0;
+    --text-primary: #F4E7D5;
+    --text-secondary: #D2B89A;
+    --border: #453128;
+    --hover: #34261F;
+    --sidebar: #0E0A08;
+    --sidebar-text: #E5D1B0;
+    --sidebar-active: #C98B4A;
+    --sidebar-hover: #2A1F1A;
+    --chart-1: #C98B4A;
+    --chart-2: #D97732;
+    --chart-3: #E5D1B0;
+    --chart-grid: #453128;
+  }
+  body {
+    @apply bg-background text-text-primary font-sans antialiased transition-colors duration-300;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+/* Custom scrollbar for a premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-text-secondary;
+}
+/* Camera Stream Fake Animation */
+@keyframes conveyor-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: -1000px 0; }
+}
+.conveyor-bg {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 100px,
+    rgba(0,0,0,0.1) 100px,
+    rgba(0,0,0,0.1) 102px
+  );
+  animation: conveyor-scroll 10s linear infinite;
+}
+.dark .conveyor-bg {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 100px,
+    rgba(255,255,255,0.05) 100px,
+    rgba(255,255,255,0.05) 102px
+  );
+}
