@@ -11,7 +11,7 @@ from uuid import uuid4
 from flask import Flask, Response
 from flask_cors import CORS
 
-ESP_IP = "10.20.255.136"
+ESP_IP = "10.174.204.136"
 NODE_BACKEND_URL = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
 VISION_UPDATE_URL = f"{NODE_BACKEND_URL}/api/inventory/update-from-vision"
 
