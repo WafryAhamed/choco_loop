@@ -1,0 +1,337 @@
+{
+  "rootFolder": "f:\\BIT\\New folder",
+  "analyzedAt": "2026-06-05T02:18:16.624Z",
+  "rootStructure": [
+    {
+      "name": ".gitignore",
+      "type": "file",
+      "size": 321,
+      "lines": 41
+    },
+    {
+      "name": "backend",
+      "type": "dir"
+    },
+    {
+      "name": "frontend",
+      "type": "dir"
+    },
+    {
+      "name": "package-lock.json",
+      "type": "file",
+      "size": 25636,
+      "lines": 730
+    },
+    {
+      "name": "package.json",
+      "type": "file",
+      "size": 137,
+      "lines": 6
+    },
+    {
+      "name": "README.md",
+      "type": "file",
+      "size": 58,
+      "lines": 3
+    },
+    {
+      "name": "start_all.bat",
+      "type": "file",
+      "size": 1580,
+      "lines": 64
+    },
+    {
+      "name": "vision",
+      "type": "dir"
+    }
+  ],
+  "rootFileSnippets": {
+    "package-lock.json": [
+      "{",
+      "\"name\": \"New folder\",",
+      "\"lockfileVersion\": 3,",
+      "\"requires\": true,",
+      "\"packages\": {",
+      "\"\": {",
+      "\"dependencies\": {",
+      "\"sqlite\": \"^5.1.1\",",
+      "\"sqlite3\": \"^6.0.1\"",
+      "}"
+    ],
+    "package.json": [
+      "{",
+      "\"name\": \"chocolate-warehouse\",",
+      "\"private\": true,",
+      "\"description\": \"Chocolate Warehouse monorepo root (backend, frontend, vision)\"",
+      "}",
+      ""
+    ],
+    "README.md": [
+      "��#\u0000 \u0000c\u0000h\u0000o\u0000c\u0000o\u0000_\u0000l\u0000o\u0000o\u0000p\u0000\r\u0000",
+      "\u0000#\u0000 \u0000c\u0000h\u0000o\u0000c\u0000o\u0000_\u0000l\u0000o\u0000o\u0000p\u0000\r\u0000",
+      "\u0000"
+    ],
+    "start_all.bat": [
+      "@echo off",
+      "setlocal",
+      "cd /d \"%~dp0\"",
+      "",
+      "echo Chocolate Warehouse - starting services...",
+      "echo Ports: Backend 5000 ^| Frontend Vite 5173 ^| Vision 8001",
+      "echo Requires XAMPP MySQL on port 3308 ^(see backend\\.env^) and database chocolate_warehouse_db",
+      "echo.",
+      "",
+      "if not exist \"%~dp0vision\\venv\\Scripts\\python.exe\" ("
+    ]
+  },
+  "importantFolders": [
+    {
+      "path": "backend",
+      "category": "backend",
+      "fileCount": 12,
+      "primaryLanguage": "TypeScript"
+    },
+    {
+      "path": "frontend",
+      "category": "frontend",
+      "fileCount": 45,
+      "primaryLanguage": "TypeScript"
+    },
+    {
+      "path": "frontend\\public",
+      "category": "assets",
+      "fileCount": 1
+    },
+    {
+      "path": "frontend\\src\\components",
+      "category": "frontend",
+      "fileCount": 13,
+      "primaryLanguage": "TypeScript"
+    },
+    {
+      "path": "frontend\\src\\components\\layout",
+      "category": "build",
+      "fileCount": 3,
+      "primaryLanguage": "TypeScript"
+    },
+    {
+      "path": "frontend\\src\\components\\ui",
+      "category": "frontend",
+      "fileCount": 4,
+      "primaryLanguage": "TypeScript"
+    },
+    {
+      "path": "frontend\\src\\lib",
+      "category": "core",
+      "fileCount": 5,
+      "primaryLanguage": "TypeScript"
+    }
+  ],
+  "readmeParagraphs": {
+    "root": "��#\u0000 \u0000c\u0000h\u0000o\u0000c\u0000o\u0000_\u0000l\u0000o\u0000o\u0000p\u0000\r\u0000\n\u0000#\u0000 \u0000c\u0000h\u0000o\u0000c\u0000o\u0000_\u0000l\u0000o\u0000o\u0000p\u0000\r\u0000\n\u0000"
+  },
+  "totals": {
+    "numFiles": 65,
+    "numDirs": 19,
+    "totalSizeBytes": 999259,
+    "totalLinesOfCode": 7124
+  },
+  "fileCategories": {
+    "other": 10,
+    "source": 44,
+    "config": 9,
+    "documentation": 2
+  },
+  "linesOfCodePerLanguage": {
+    "TypeScript": 6476,
+    "JavaScript": 113,
+    "Batch": 64,
+    "Python": 471
+  },
+  "filesPerLanguage": {
+    "TypeScript": 37,
+    "JavaScript": 4,
+    "Batch": 1,
+    "Python": 2
+  },
+  "projectTypes": [
+    "JavaScript/Node.js",
+    "Python (requirements)"
+  ],
+  "frameworks": [
+    "React",
+    "Vite",
+    "Flask"
+  ],
+  "entryPoints": [
+    "vision\\app.py"
+  ],
+  "ciCdTools": [],
+  "packageManagers": [
+    "npm/yarn"
+  ],
+  "topLevelDirectories": [
+    {
+      "name": "frontend",
+      "numFiles": 45,
+      "totalLoc": 5626,
+      "dominantLanguage": "TypeScript"
+    },
+    {
+      "name": "backend",
+      "numFiles": 12,
+      "totalLoc": 963,
+      "dominantLanguage": "TypeScript"
+    },
+    {
+      "name": "vision",
+      "numFiles": 3,
+      "totalLoc": 471,
+      "dominantLanguage": "Python"
+    }
+  ],
+  "detailedDirectories": [
+    {
+      "path": "frontend",
+      "name": "frontend",
+      "level": 1,
+      "numFiles": 45,
+      "totalLoc": 5626,
+      "dominantLanguage": "TypeScript",
+      "category": "Web/UI",
+      "description": "Web/UI module with 45 files (TypeScript)",
+      "subdirectories": [
+        {
+          "path": "frontend\\src",
+          "name": "src",
+          "level": 2,
+          "numFiles": 34,
+          "totalLoc": 5544,
+          "dominantLanguage": "TypeScript",
+          "category": "General",
+          "description": "General module with 34 files (TypeScript)",
+          "subdirectories": [
+            {
+              "path": "frontend\\src\\pages",
+              "name": "pages",
+              "level": 3,
+              "numFiles": 8,
+              "totalLoc": 3219,
+              "dominantLanguage": "TypeScript",
+              "category": "General",
+              "description": "General module with 8 files (TypeScript)",
+              "subdirectories": []
+            },
+            {
+              "path": "frontend\\src\\components",
+              "name": "components",
+              "level": 3,
+              "numFiles": 13,
+              "totalLoc": 1241,
+              "dominantLanguage": "TypeScript",
+              "category": "General",
+              "description": "General module with 13 files (TypeScript)",
+              "subdirectories": []
+            },
+            {
+              "path": "frontend\\src\\lib",
+              "name": "lib",
+              "level": 3,
+              "numFiles": 5,
+              "totalLoc": 819,
+              "dominantLanguage": "TypeScript",
+              "category": "Library",
+              "description": "Library module with 5 files (TypeScript)",
+              "subdirectories": []
+            },
+            {
+              "path": "frontend\\src\\contexts",
+              "name": "contexts",
+              "level": 3,
+              "numFiles": 2,
+              "totalLoc": 149,
+              "dominantLanguage": "TypeScript",
+              "category": "General",
+              "description": "General module with 2 files (TypeScript)",
+              "subdirectories": []
+            }
+          ]
+        },
+        {
+          "path": "frontend\\public",
+          "name": "public",
+          "level": 2,
+          "numFiles": 1,
+          "totalLoc": 0,
+          "category": "General",
+          "description": "General module with 1 files",
+          "subdirectories": []
+        }
+      ]
+    },
+    {
+      "path": "backend",
+      "name": "backend",
+      "level": 1,
+      "numFiles": 12,
+      "totalLoc": 963,
+      "dominantLanguage": "TypeScript",
+      "category": "General",
+      "description": "General module with 12 files (TypeScript)",
+      "subdirectories": []
+    },
+    {
+      "path": "vision",
+      "name": "vision",
+      "level": 1,
+      "numFiles": 3,
+      "totalLoc": 471,
+      "dominantLanguage": "Python",
+      "category": "General",
+      "description": "General module with 3 files (Python)",
+      "subdirectories": []
+    }
+  ],
+  "architecturalInsights": {
+    "coreApplications": [],
+    "entryPointDetails": [
+      {
+        "path": "C:\\Users\\Ashraf\\AppData\\Local\\Programs\\Microsoft VS Code\\vision\\app.py",
+        "type": "Unknown",
+        "description": ""
+      }
+    ],
+    "serviceArchitecture": {
+      "microservices": [],
+      "monoliths": [],
+      "libraries": []
+    },
+    "layeredArchitecture": {
+      "presentation": [],
+      "business": [],
+      "data": [],
+      "infrastructure": []
+    }
+  },
+  "largeFiles": [],
+  "dependencies": {
+    "production": [],
+    "development": [],
+    "total": 0
+  },
+  "complexity": {
+    "averageFileSize": 109.6,
+    "maxFileSize": 0,
+    "nestedDepth": 0,
+    "estimatedComplexity": "low"
+  },
+  "gitRepo": {
+    "firstCommitDate": "2026-06-04",
+    "totalCommits": 2,
+    "numContributors": 0,
+    "currentBranch": "main",
+    "remoteUrls": [
+      "https://github.com/Ashraf-Saleem/choco_loop.git"
+    ]
+  }
+}
