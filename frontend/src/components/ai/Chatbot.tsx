@@ -6,7 +6,7 @@ import {
   getAssistantReply,
   suggestedQuestions } from
 '../../lib/assistantEngine';
-import { useSpeechRecognition } from '../../lib/useSpeechRecognition';
+import { useSpeechRecognition, speak } from '../../lib/useSpeechRecognition';
 interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
@@ -31,13 +31,18 @@ export function Chatbot() {
     resetTranscript,
     isSupported
   } = useSpeechRecognition();
-  // Push final voice transcript into the input
+  // Push final voice transcript into the input and auto-send
   useEffect(() => {
     if (transcript) {
       setInput(transcript);
-      resetTranscript();
+      // Auto-send voice command after a brief moment so user sees it
+      const timer = setTimeout(() => {
+        sendMessage(transcript);
+        resetTranscript();
+      }, 400);
+      return () => clearTimeout(timer);
     }
-  }, [transcript, resetTranscript]);
+  }, [transcript]);
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -67,6 +72,8 @@ export function Chatbot() {
         }]
         );
         setIsTyping(false);
+        // Read the reply aloud
+        speak(reply.text);
       },
       700 + Math.random() * 500
     );
@@ -242,10 +249,19 @@ export function Chatbot() {
               aria-label={
               isListening ? 'Stop listening' : 'Start voice input'
               }
-              className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isListening ? 'bg-status-danger/10 text-status-danger' : 'text-text-secondary hover:bg-hover'}`}>
+              className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${isListening ? 'bg-status-danger text-white shadow-lg shadow-status-danger/30' : 'text-text-secondary hover:bg-hover'}`}>
               
+                {isListening ? (
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.2 }}
+                  >
+                    <Mic size={18} />
+                  </motion.div>
+                ) : (
                   <Mic size={18} />
-                </button>
+                )}
+              </button>
             }
               <input
               value={input}

@@ -7,16 +7,20 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { toast } from 'sonner';
 export function Login() {
-  const [email, setEmail] = useState('admin@warehouse.local');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('admin@chocoloop.com');
+  const [password, setPassword] = useState('admin123');
   const { login } = useAuth();
   const navigate = useNavigate();
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email && password) {
-      login(email);
-      toast.success('Successfully logged in');
-      navigate('/dashboard');
+      const result = await login(email, password);
+      if (result && result.success) {
+        toast.success('Successfully logged in');
+        navigate('/dashboard');
+      } else {
+        toast.error(result?.error || 'Invalid email or password');
+      }
     } else {
       toast.error('Please enter both email and password');
     }
@@ -48,9 +52,9 @@ export function Login() {
             transition={{
               duration: 0.5
             }}
-            className="w-24 h-24 bg-accent/20 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-accent/30">
+            className="w-24 h-24 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-8 border border-accent/20 p-2">
             
-            <span className="text-accent text-5xl">🍫</span>
+            <img src="/LOGO.png" alt="ChocoLoop Logo" className="w-full h-full object-contain rounded-xl" />
           </motion.div>
           <motion.h1
             initial={{
@@ -67,7 +71,7 @@ export function Login() {
             }}
             className="text-5xl font-serif font-bold text-white mb-4">
             
-            Cacao Control
+            ChocoLoop
           </motion.h1>
           <motion.p
             initial={{
@@ -172,12 +176,14 @@ export function Login() {
                 
                 <span className="text-sm text-text-secondary">Remember me</span>
               </label>
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() =>
+                  toast.info('Contact your warehouse admin to reset your password.')
+                }
                 className="text-sm text-primary hover:text-primary-dark font-medium">
-                
                 Forgot password?
-              </a>
+              </button>
             </motion.div>
 
             <motion.div

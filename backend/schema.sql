@@ -2,41 +2,41 @@ DROP DATABASE IF EXISTS chocolate_warehouse_db;
 CREATE DATABASE chocolate_warehouse_db;
 USE chocolate_warehouse_db;
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255),
   email VARCHAR(255) UNIQUE,
   password_hash VARCHAR(255),
-  role ENUM('admin','operator'),
+  role ENUM('admin','operator') DEFAULT 'operator',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE inventory_items (
+CREATE TABLE IF NOT EXISTS inventory_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255),
   sku VARCHAR(100),
   category VARCHAR(100),
-  quantity INT,
-  capacity INT,
+  quantity INT DEFAULT 0,
+  capacity INT DEFAULT 1000,
   location VARCHAR(255),
-  status VARCHAR(50),
+  status VARCHAR(50) DEFAULT 'Out of Stock',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  task_type VARCHAR(100),
+  task_type VARCHAR(50),
   description TEXT,
   item_id INT,
-  quantity INT,
-  status VARCHAR(50),
+  quantity INT DEFAULT 1,
+  status VARCHAR(50) DEFAULT 'Queued',
   progress INT DEFAULT 0,
   robot_id VARCHAR(50),
   duration VARCHAR(50),
-  operator VARCHAR(50),
+  operator VARCHAR(100),
   confidence INT,
-  source VARCHAR(50),
+  source ENUM('voice','manual','vision') DEFAULT 'manual',
   assigned_by INT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,
@@ -44,7 +44,7 @@ CREATE TABLE tasks (
   FOREIGN KEY (assigned_by) REFERENCES users(id)
 );
 
-CREATE TABLE task_logs (
+CREATE TABLE IF NOT EXISTS task_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   task_id INT,
   action VARCHAR(50),
@@ -53,19 +53,37 @@ CREATE TABLE task_logs (
   FOREIGN KEY (task_id) REFERENCES tasks(id)
 );
 
-CREATE TABLE robots (
+CREATE TABLE IF NOT EXISTS robots (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255),
-  status VARCHAR(50),
-  battery_level INT,
+  status ENUM('idle','working','error') DEFAULT 'idle',
+  battery_level INT DEFAULT 100,
   current_task_id INT,
   FOREIGN KEY (current_task_id) REFERENCES tasks(id)
 );
 
-CREATE TABLE voice_commands (
+CREATE TABLE IF NOT EXISTS voice_commands (
   id INT AUTO_INCREMENT PRIMARY KEY,
   command_text TEXT,
   parsed_task_type VARCHAR(100),
   parsed_item VARCHAR(255),
-  parsed_quantity INT
+  parsed_quantity INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS vision_detections (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  item VARCHAR(255) NOT NULL,
+  color VARCHAR(50) NOT NULL,
+  action VARCHAR(50) DEFAULT 'pick',
+  confidence INT DEFAULT 95,
+  event_id VARCHAR(255) UNIQUE,
+  source VARCHAR(50) DEFAULT 'vision',
+  detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS system_settings (
+  setting_key VARCHAR(100) PRIMARY KEY,
+  setting_value TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

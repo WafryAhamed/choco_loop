@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Search, Filter, Download, Plus, AlertTriangle, X } from 'lucide-react';
 import {
@@ -15,6 +17,7 @@ import { Input } from '../components/ui/Input';
 import { StatusPill } from '../components/ui/StatusPill';
 import { useInventory, useDashboardSummary } from '../lib/useApi';
 export function Inventory() {
+  const navigate = useNavigate();
   const { inventoryData, loading } = useInventory();
   const { inventoryDistribution } = useDashboardSummary();
   const [searchTerm, setSearchTerm] = useState('');
@@ -296,7 +299,13 @@ export function Inventory() {
                     
                       {item.stock} left
                     </p>
-                    <button className="text-xs text-primary hover:underline mt-1">
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline mt-1"
+                      onClick={() => {
+                        navigate('/tasks/assign');
+                        toast.info(`Open Assign Task to queue a restock for ${item.name}.`);
+                      }}>
                       Restock
                     </button>
                   </div>
@@ -334,7 +343,15 @@ export function Inventory() {
             </div>
             <div className="p-4 border-t border-border flex justify-end gap-3 bg-background/50">
               <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Cancel</Button>
-              <Button onClick={() => setIsAddModalOpen(false)}>Save Product</Button>
+              <Button
+                onClick={() => {
+                  setIsAddModalOpen(false);
+                  toast.info(
+                    'Adding products via the UI is not enabled yet — update inventory in the database or via vision picks.'
+                  );
+                }}>
+                Save Product
+              </Button>
             </div>
           </motion.div>
         </div>

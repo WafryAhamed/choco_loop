@@ -76,14 +76,14 @@ export function Dashboard() {
         
         <KPICard
           title="Active Tasks"
-          value={0}
+          value={dailySummary?.pendingTasks || 0}
           icon={Activity}
           data={sparklineData2}
           delay={0.2} />
         
         <KPICard
-          title="Throughput / Hour"
-          value={0}
+          title="Production Throughput (24h)"
+          value={dailySummary?.throughput24h ?? dailySummary?.throughputPerHour ?? 0}
           suffix=" units"
           icon={Zap}
           data={sparklineData3}
@@ -91,7 +91,7 @@ export function Dashboard() {
         
         <KPICard
           title="Inventory Value"
-          value={0}
+          value={dailySummary?.inventoryValue || 0}
           prefix="Rs. "
           icon={TrendingUp}
           data={sparklineData4}

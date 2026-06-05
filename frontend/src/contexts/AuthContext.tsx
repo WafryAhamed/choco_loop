@@ -1,4 +1,5 @@
 import React, { useEffect, useState, createContext, useContext } from 'react';
+import { apiFetch, API_BASE } from '../lib/api';
 export interface User {
   email: string;
   name: string;
@@ -7,7 +8,7 @@ export interface User {
 }
 interface AuthContextType {
   user: User | null;
-  login: (email: string, name?: string) => void;
+  login: (email: string, password?: string) => Promise<{ success: boolean; error?: string } | void>;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -29,15 +30,28 @@ export function AuthProvider({ children }: {children: React.ReactNode;}) {
     }
     setIsLoading(false);
   }, []);
-  const login = (email: string, name = 'Sarah Chen') => {
-    const newUser = {
-      email,
-      name,
-      role: 'Warehouse Manager'
-    };
-    localStorage.setItem('auth-token', 'mock-jwt-token-12345');
-    localStorage.setItem('user', JSON.stringify(newUser));
-    setUser(newUser);
+  const login = async (email: string, password = 'password123') => {
+    try {
+      const response = await apiFetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      if (!response) {
+        return { success: false, error: 'Could not connect to authentication server' };
+      }
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('auth-token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+        return { success: true };
+      } else {
+        return { success: false, error: data.message || 'Login failed' };
+      }
+    } catch {
+      return { success: false, error: 'Could not connect to authentication server' };
+    }
   };
   const logout = () => {
     localStorage.removeItem('auth-token');

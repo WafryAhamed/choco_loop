@@ -1,0 +1,5 @@
+{
+  "name": "chocolate-warehouse",
+  "private": true,
+  "description": "Chocolate Warehouse monorepo root (backend, frontend, vision)"
+}

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Search, Sun, Moon, Menu } from 'lucide-react';
+import { Bell, Search, Sun, Moon, Menu, Mic } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useSpeechRecognition } from '../../lib/useSpeechRecognition';
+import { API_BASE, apiFetch } from '../../lib/api';
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -20,12 +22,49 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   
   const searchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
+
+  const {
+    isListening: isVoiceSearching,
+    transcript: voiceSearchTranscript,
+    startListening: startVoiceSearch,
+    stopListening: stopVoiceSearch,
+    resetTranscript: resetVoiceTranscript,
+    isSupported: isVoiceSupported,
+  } = useSpeechRecognition();
+
+  // Push voice transcript into search query
+  useEffect(() => {
+    if (voiceSearchTranscript) {
+      setSearchQuery(voiceSearchTranscript);
+      setIsSearchOpen(true);
+      resetVoiceTranscript();
+    }
+  }, [voiceSearchTranscript, resetVoiceTranscript]);
   
-  const mockNotifications = [
-    { id: 1, text: 'Low inventory on Cacao Beans', time: '5m ago', unread: true },
-    { id: 2, text: 'New task assigned to you', time: '1h ago', unread: true },
-    { id: 3, text: 'System update completed', time: '2h ago', unread: false }
-  ];
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchNotifications() {
+      try {
+        const token = localStorage.getItem('auth-token');
+        if (!token) return;
+        const res = await apiFetch(`${API_BASE}/notifications`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res) return;
+        const data = await res.json();
+        if (data.success && data.data) {
+          setNotifications(data.data);
+        }
+      } catch {
+        // offline — apiFetch already warned once
+      }
+    }
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const searchResults = [
     { name: 'Dashboard', path: '/dashboard' },
@@ -96,9 +135,32 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 setIsSearchOpen(true);
               }}
               onFocus={() => setIsSearchOpen(true)}
-              placeholder="Search (Ctrl+K)"
-              className="bg-background border border-border rounded-full pl-10 pr-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48 lg:w-64"
+              placeholder={isVoiceSearching ? 'Listening…' : 'Search (Ctrl+K)'}
+              className={`bg-background border rounded-full pl-10 pr-12 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-48 lg:w-64 transition-colors ${
+                isVoiceSearching ? 'border-red-400 ring-2 ring-red-400/30' : 'border-border'
+              }`}
             />
+            {isVoiceSupported && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isVoiceSearching) {
+                    stopVoiceSearch();
+                  } else {
+                    setSearchQuery('');
+                    startVoiceSearch();
+                  }
+                }}
+                aria-label={isVoiceSearching ? 'Stop voice search' : 'Voice search'}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                  isVoiceSearching
+                    ? 'bg-red-500 text-white animate-pulse'
+                    : 'text-text-secondary hover:text-primary hover:bg-primary/10'
+                }`}
+              >
+                <Mic size={14} />
+              </button>
+            )}
           </div>
           
           <button 
@@ -179,7 +241,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             className="relative w-10 h-10 rounded-full flex items-center justify-center text-text-secondary hover:bg-hover transition-colors flex-shrink-0"
           >
             <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-status-danger rounded-full border-2 border-surface"></span>
+            {notifications.length > 0 && (
+              <span className="absolute top-2 right-2 w-2 h-2 bg-status-danger rounded-full border-2 border-surface"></span>
+            )}
           </button>
 
           <AnimatePresence>
@@ -203,22 +267,26 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   </button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
-                  {mockNotifications.map(notification => (
-                    <div 
-                      key={notification.id}
-                      className={`p-4 border-b border-border hover:bg-hover cursor-pointer transition-colors ${notification.unread ? 'bg-primary/5' : ''}`}
-                    >
-                      <div className="flex gap-3">
-                        <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${notification.unread ? 'bg-primary' : 'bg-transparent'}`} />
-                        <div>
-                          <p className={`text-sm ${notification.unread ? 'text-text-primary font-medium' : 'text-text-secondary'}`}>
-                            {notification.text}
-                          </p>
-                          <p className="text-xs text-text-secondary mt-1">{notification.time}</p>
+                  {notifications.length > 0 ? (
+                    notifications.map(notification => (
+                      <div 
+                        key={notification.id}
+                        className={`p-4 border-b border-border hover:bg-hover cursor-pointer transition-colors ${notification.unread ? 'bg-primary/5' : ''}`}
+                      >
+                        <div className="flex gap-3">
+                          <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${notification.unread ? 'bg-primary' : 'bg-transparent'}`} />
+                          <div>
+                            <p className={`text-sm ${notification.unread ? 'text-text-primary font-medium' : 'text-text-secondary'}`}>
+                              {notification.text}
+                            </p>
+                            <p className="text-xs text-text-secondary mt-1">{notification.time}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="p-4 text-sm text-text-secondary text-center">No notifications</div>
+                  )}
                 </div>
               </motion.div>
             )}

@@ -16,8 +16,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { toast } from 'sonner';
 import { useSpeechRecognition, speak } from '../lib/useSpeechRecognition';
-import { useInventory } from '../lib/useApi';
-import { parseCommand } from '../lib/commandParser';
+import { useInventory, createTask } from '../lib/useApi';
+import { executeVoiceCommand } from '../lib/commandParser';
 interface ChatMessage {
   role: 'user' | 'ai';
   text: string;
@@ -47,32 +47,28 @@ export function TaskAssign() {
     error
   } = useSpeechRecognition();
   // Process a finalized command (from voice or text fallback)
-  const processCommand = (text: string) => {
+  const processCommand = async (text: string) => {
     const clean = text.trim();
     if (!clean) return;
+    setMessages((prev) => [...prev, { role: 'user', text: clean }]);
+
+    const result = await executeVoiceCommand(clean);
+
     setMessages((prev) => [
-    ...prev,
-    {
-      role: 'user',
-      text: clean
-    }]
-    );
-    setTimeout(() => {
-      const result = parseCommand(clean);
-      setMessages((prev) => [
       ...prev,
       {
         role: 'ai',
         text: result.reply,
-        type: result.taskId ? 'status' : undefined,
-        taskId: result.taskId
-      }]
-      );
-      if (result.toast.type === 'success') toast.success(result.toast.message);else
-      if (result.toast.type === 'error') toast.error(result.toast.message);else
-      toast.info(result.toast.message);
-      if (voiceReplies) speak(result.reply);
-    }, 800);
+        type: result.parsed.intent !== 'unknown' ? 'status' : undefined,
+        taskId: result.taskId,
+      },
+    ]);
+
+    if (result.toast.type === 'success') toast.success(result.toast.message);
+    else if (result.toast.type === 'error') toast.error(result.toast.message);
+    else toast.info(result.toast.message);
+
+    if (voiceReplies) speak(result.reply);
   };
   // When voice produces a final transcript, process it
   useEffect(() => {
@@ -90,9 +86,20 @@ export function TaskAssign() {
     if (isListening) stopListening();else
     startListening();
   };
-  const handleManualSubmit = (e: React.FormEvent) => {
+  const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Manual task assigned to robot');
+    try {
+      await createTask({
+        type: manualForm.type,
+        description: `${manualForm.type} ${manualForm.product || 'items'}${manualForm.source ? ' from ' + manualForm.source : ''}${manualForm.dest ? ' → ' + manualForm.dest : ''}`,
+        product: manualForm.product,
+        quantity: 12,
+        source: 'web',
+      });
+      toast.success('Task assigned to robot — check the queue!');
+    } catch {
+      toast.error('Failed to create task');
+    }
     setManualForm({
       type: 'Pick',
       product: '',
@@ -102,10 +109,15 @@ export function TaskAssign() {
     });
   };
   const exampleCommands = [
-  'Move 12 dark chocolate to shelf A',
-  'Pick milk boxes to bin C',
-  'Start packing station 2',
-  'Pause robot arm'];
+    'Start the conveyor',
+    'Stop the camera',
+    "What's in stock",
+    'How many milk chocolate left',
+    'Queue pick 10 dark chocolate',
+    'Show active tasks',
+    'System status',
+    'Pause robot',
+  ];
 
   return (
     <div className="space-y-6">
@@ -139,6 +151,10 @@ export function TaskAssign() {
                 })
                 }>
                 
+                <option>Pick</option>
+                <option>Sort</option>
+                <option>Pack</option>
+                <option>Move</option>
                 <option>Retrieve</option>
               </select>
             </div>

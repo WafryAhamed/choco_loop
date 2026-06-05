@@ -53,11 +53,9 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       >
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center text-sidebar">
-              <Coffee size={20} className="text-white" />
-            </div>
+            <img src="/LOGO.png" alt="ChocoLoop Logo" className="w-8 h-8 object-contain rounded-lg" />
             <h1 className="text-sidebar-text font-serif font-bold text-xl tracking-wide">
-              Cacao Control
+              ChocoLoop
             </h1>
           </div>
           <button 
