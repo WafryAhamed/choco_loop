@@ -6,11 +6,34 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import type { Request, Response, NextFunction } from 'express';
-import { db } from './db';
+import { db, testConnection } from './db';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+});
+
+// Error response standardization middleware
+app.use((req, res, next) => {
+  res.sendError = (status: number, message: string, details?: any) => {
+    console.error(`[Error] ${status}: ${message}`, details || '');
+    res.status(status).json({
+      success: false,
+      error: message,
+      ...(details && { details })
+    });
+  };
+  next();
+});
 
 type AuthUser = {
   id: number;
@@ -20,6 +43,7 @@ type AuthUser = {
 
 type AuthRequest = Request & {
   user?: AuthUser;
+  sendError?: (status: number, message: string, details?: any) => void;
 };
 
 function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
@@ -43,6 +67,41 @@ function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) 
   }
 }
 
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+  try {
+    const dbHealthy = await testConnection();
+    const visionOnline = await checkVisionService();
+    
+    const status = dbHealthy ? 200 : 503;
+    res.status(status).json({
+      success: dbHealthy,
+      timestamp: new Date().toISOString(),
+      services: {
+        database: dbHealthy ? 'online' : 'offline',
+        vision: visionOnline ? 'online' : 'offline',
+        api: 'online'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Health check failed',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Vision service availability check
+async function checkVisionService(): Promise<boolean> {
+  try {
+    const response = await fetch('http://localhost:8001/health', { timeout: 2000 });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 // -----------------------------------------------------------------------------
 // AUTH ENDPOINTS
 // -----------------------------------------------------------------------------
@@ -51,24 +110,30 @@ app.post('/api/auth/login', async (req, res) => {
   const normalizedEmail = (email || '').trim().toLowerCase();
 
   if (!normalizedEmail || !password) {
-    return res.status(400).json({ success: false, error: 'Email and password are required.' });
+    return res.sendError(400, 'Email and password are required.');
   }
 
   try {
     const [users]: any = await db.query('SELECT * FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
     if (!users || users.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.sendError(401, 'Invalid email or password');
     }
 
     const user = users[0];
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
-      return res.status(401).json({ success: false, message: 'Invalid password' });
+      return res.sendError(401, 'Invalid email or password');
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('JWT_SECRET not configured');
+      return res.sendError(500, 'Server configuration error');
     }
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'your_secret_key',
+      jwtSecret,
       { expiresIn: '1d' }
     );
 
@@ -78,8 +143,7 @@ app.post('/api/auth/login', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ success: false, error: 'Login failed. Please try again.' });
+    res.sendError(500, 'Login failed', error);
   }
 });
 
@@ -87,11 +151,11 @@ app.get('/api/auth/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const [users]: any = await db.query('SELECT id, name, email, role FROM users WHERE id = ? LIMIT 1', [req.user?.id]);
     if (!users || users.length === 0) {
-      return res.status(401).json({ success: false, error: 'Session expired' });
+      return res.sendError(401, 'Session expired');
     }
     return res.json({ success: true, user: users[0] });
   } catch (error) {
-    return res.status(500).json({ success: false, error: 'Failed to validate session.' });
+    res.sendError(500, 'Failed to validate session', error);
   }
 });
 
@@ -755,22 +819,62 @@ async function processTaskQueue() {
 setInterval(processTaskQueue, 3000);
 
 const PORT = Number(process.env.PORT || 5000);
-const server = app.listen(PORT, async () => {
-  console.log(`API server running on http://localhost:${PORT}`);
-  try {
-    await db.query('SELECT 1');
-    console.log('MySQL database is ready.');
-    console.log('[Worker] Task processor started (3s interval)');
-  } catch (error) {
-    console.error('MySQL connection failed:', error);
-    console.error('Ensure XAMPP MySQL is running on port 3308 and chocolate_warehouse_db exists (npm run init-db).');
-  }
-});
+let server: any;
+let workerInterval: NodeJS.Timeout;
 
-server.on('error', (err: NodeJS.ErrnoException) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Stop the other process: netstat -ano | findstr :${PORT}`);
-    process.exit(1);
+const startServer = async () => {
+  server = app.listen(PORT, async () => {
+    console.log(`[${new Date().toISOString()}] API server running on http://localhost:${PORT}`);
+    
+    // Test database connection
+    const dbReady = await testConnection();
+    if (dbReady) {
+      console.log('[DB] MySQL database is ready.');
+      console.log('[Worker] Task processor started (3s interval)');
+    } else {
+      console.error('[DB] Failed to connect to MySQL. Check your database configuration.');
+    }
+  });
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[Error] Port ${PORT} is already in use. Kill the process: netstat -ano | findstr :${PORT}`);
+      process.exit(1);
+    }
+    throw err;
+  });
+
+  // Start background task worker
+  workerInterval = setInterval(processTaskQueue, 3000);
+};
+
+// Graceful shutdown
+const gracefulShutdown = async () => {
+  console.log('[Server] Shutting down gracefully...');
+  
+  if (workerInterval) {
+    clearInterval(workerInterval);
+    console.log('[Worker] Task processor stopped.');
   }
-  throw err;
-});
+  
+  if (server) {
+    server.close(() => {
+      console.log('[Server] HTTP server closed.');
+    });
+  }
+  
+  try {
+    const connection = await db.getConnection();
+    connection.release();
+    console.log('[DB] Database connection released.');
+  } catch (error) {
+    console.error('[DB] Error closing connections:', error);
+  }
+  
+  process.exit(0);
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+startServer();
