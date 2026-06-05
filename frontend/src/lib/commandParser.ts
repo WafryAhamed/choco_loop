@@ -165,6 +165,18 @@ async function fetchSystemHealth(): Promise<any[]> {
   return data.systemHealth || [];
 }
 
+function findInventoryItem(items: any[], product?: string): any | undefined {
+  if (!product) return undefined;
+  const normalized = product.toLowerCase();
+  return items.find(
+    (item) =>
+      item.name?.toLowerCase().includes(normalized) ||
+      item.category?.toLowerCase().includes(normalized) ||
+      item.sku?.toLowerCase() === normalized ||
+      item.sku?.toLowerCase().includes(normalized)
+  );
+}
+
 async function postTask(
   type: string,
   description: string,
@@ -334,8 +346,53 @@ export async function executeVoiceCommand(rawText: string): Promise<CommandResul
         };
       }
 
+      case 'pick': {
+        const inventory = await fetchInventory();
+        const matched = findInventoryItem(inventory, parsed.product);
+        if (parsed.product && !matched) {
+          return {
+            parsed,
+            reply: `I could not find ${parsed.product} in inventory. Try saying a product name exactly as it appears on the Inventory page.`,
+            toast: { type: 'error', message: 'Product not found' },
+          };
+        }
+
+        if (matched) {
+          const available = matched.stock ?? 0;
+          if (available <= 0) {
+            return {
+              parsed,
+              reply: `${matched.name} is out of stock. Check Inventory for replenishment before queuing a pick task.`,
+              toast: { type: 'error', message: 'Out of stock' },
+            };
+          }
+
+          const requested = qty;
+          const actualQty = Math.min(requested, available);
+          const desc = `Pick ${actualQty} ${matched.name}${parsed.destination ? ` → ${parsed.destination}` : ''}`;
+          const taskId = await postTask('Pick', desc, matched.name, actualQty);
+
+          return {
+            parsed,
+            reply: actualQty < requested
+              ? `Only ${available} ${matched.name} available. Queued a partial pick of ${actualQty} units.`
+              : `Queued pick task for ${actualQty} ${matched.name}${parsed.destination ? ` to ${parsed.destination}` : ''}.`,
+            taskId,
+            toast: { type: 'success', message: 'Pick task queued' },
+          };
+        }
+
+        const desc = `Pick ${qty} items${parsed.destination ? ` → ${parsed.destination}` : ''}`;
+        const taskId = await postTask('Pick', desc, parsed.product, qty);
+        return {
+          parsed,
+          reply: `Queued generic pick task for ${qty} items. Add a product name for an inventory-aware task next time.`,
+          taskId,
+          toast: { type: 'success', message: 'Pick task queued' },
+        };
+      }
+
       case 'move':
-      case 'pick':
       case 'sort':
       case 'pack':
       case 'start_station': {
@@ -346,10 +403,11 @@ export async function executeVoiceCommand(rawText: string): Promise<CommandResul
         const desc = `${type} ${qty} ${parsed.product || 'units'}${
           parsed.destination ? ` → ${parsed.destination}` : ''
         }${parsed.station ? ` at ${parsed.station}` : ''}`;
-        await postTask(type, desc, parsed.product, qty);
+        const taskId = await postTask(type, desc, parsed.product, qty);
         return {
           parsed,
           reply: `Queued: ${desc}. Check Task History for progress.`,
+          taskId,
           toast: { type: 'success', message: `${type} task queued` },
         };
       }

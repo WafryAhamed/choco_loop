@@ -309,13 +309,14 @@ app.post('/api/tasks', async (req, res) => {
     }
 
     const desc = description || `${type || 'Pick'} ${quantity || 12} ${product || 'chocolates'}`;
-    await db.query(
+    const [insertResult]: any = await db.query(
       `INSERT INTO tasks (task_type, description, item_id, quantity, status, progress, robot_id, operator, source)
        VALUES (?, ?, ?, ?, 'Queued', 0, 'RBT-01', ?, ?)`,
       [type || 'Pick', desc, itemId, quantity || 12, source === 'voice' ? 'AI' : 'Manual', source || 'web']
     );
+    const taskId = insertResult.insertId ? `T-${insertResult.insertId}` : undefined;
 
-    res.json({ success: true, message: 'Task queued successfully' });
+    res.json({ success: true, message: 'Task queued successfully', taskId });
   } catch (error) {
     console.error('Failed to create task:', error);
     res.status(500).json({ error: 'Failed to create task' });

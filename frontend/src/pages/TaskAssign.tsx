@@ -16,7 +16,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { toast } from 'sonner';
 import { useSpeechRecognition, speak } from '../lib/useSpeechRecognition';
-import { useInventory, createTask } from '../lib/useApi';
+import { useInventory, useTasksActive, createTask } from '../lib/useApi';
 import { executeVoiceCommand } from '../lib/commandParser';
 interface ChatMessage {
   role: 'user' | 'ai';
@@ -36,6 +36,7 @@ export function TaskAssign() {
     priority: 'Normal'
   });
   const { inventoryData } = useInventory();
+  const { activeTasks } = useTasksActive();
   const {
     isListening,
     transcript,
@@ -113,6 +114,7 @@ export function TaskAssign() {
     'Stop the camera',
     "What's in stock",
     'How many milk chocolate left',
+    'Pick 3 white chocolate',
     'Queue pick 10 dark chocolate',
     'Show active tasks',
     'System status',
@@ -215,9 +217,11 @@ export function TaskAssign() {
                 <h2 className="text-xl font-serif font-semibold text-text-primary">
                   Voice Assistant
                 </h2>
-                <p className="text-xs text-status-success flex items-center gap-1">
+                <p className="text-xs text-status-success flex flex-wrap items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-status-success" />
                   On-device voice recognition · Ready
+                  <span className="mx-1">•</span>
+                  {activeTasks?.length ?? 0} active tasks
                 </p>
               </div>
             </div>
