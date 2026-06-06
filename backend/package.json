@@ -4,7 +4,14 @@
   "main": "index.ts",
   "scripts": {
     "dev": "tsx watch index.ts",
+<<<<<<< HEAD
     "start": "tsx index.ts",
+=======
+<<<<<<< HEAD
+=======
+    "start": "tsx index.ts",
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     "seed": "tsx seed.ts",
     "init-db": "tsx init-db.ts"
   },

@@ -58,11 +58,27 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     };
 
     recognition.onerror = (event: any) => {
+<<<<<<< HEAD
       console.error('[Speech Recognition] Error:', event.error);
+=======
+<<<<<<< HEAD
+=======
+      console.error('[Speech Recognition] Error:', event.error);
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
       if (event.error === 'no-speech') {
         setError('No speech detected. Please try again.');
       } else if (event.error === 'not-allowed') {
         setError(
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+          'Microphone access denied. Enable it in your browser settings.'
+        );
+      } else {
+        setError(`Recognition error: ${event.error}`);
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
           'Microphone access denied. Please allow microphone in browser permissions and reload the page.'
         );
       } else if (event.error === 'network') {
@@ -71,12 +87,23 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
         setError('No microphone found. Please connect a microphone and try again.');
       } else {
         setError(`Recognition error: ${event.error}. Please try again.`);
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
       }
       setIsListening(false);
     };
 
     recognition.onend = () => {
+<<<<<<< HEAD
       console.log('[Speech Recognition] Session ended');
+=======
+<<<<<<< HEAD
+=======
+      console.log('[Speech Recognition] Session ended');
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
       setIsListening(false);
       setInterimTranscript('');
     };

@@ -16,7 +16,15 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { toast } from 'sonner';
 import { useSpeechRecognition, speak } from '../lib/useSpeechRecognition';
+<<<<<<< HEAD
 import { useInventory, useTasksActive, createTask } from '../lib/useApi';
+=======
+<<<<<<< HEAD
+import { useInventory, createTask } from '../lib/useApi';
+=======
+import { useInventory, useTasksActive, createTask } from '../lib/useApi';
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 import { executeVoiceCommand } from '../lib/commandParser';
 interface ChatMessage {
   role: 'user' | 'ai';
@@ -28,6 +36,19 @@ export function TaskAssign() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [textFallback, setTextFallback] = useState('');
   const [voiceReplies, setVoiceReplies] = useState(false);
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  const [manualForm, setManualForm] = useState({
+    type: 'Pick',
+    product: '',
+    source: '',
+    dest: '',
+    priority: 'Normal'
+  });
+  const { inventoryData } = useInventory();
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [manualForm, setManualForm] = useState({
     type: 'Retrieve',
@@ -39,6 +60,10 @@ export function TaskAssign() {
   const [manualError, setManualError] = useState('');
   const { inventoryData } = useInventory();
   const { activeTasks } = useTasksActive();
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const {
     isListening,
     transcript,
@@ -91,6 +116,30 @@ export function TaskAssign() {
   };
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+    try {
+      await createTask({
+        type: manualForm.type,
+        description: `${manualForm.type} ${manualForm.product || 'items'}${manualForm.source ? ' from ' + manualForm.source : ''}${manualForm.dest ? ' → ' + manualForm.dest : ''}`,
+        product: manualForm.product,
+        quantity: 12,
+        source: 'web',
+      });
+      toast.success('Task assigned to robot — check the queue!');
+    } catch {
+      toast.error('Failed to create task');
+    }
+    setManualForm({
+      type: 'Pick',
+      product: '',
+      source: '',
+      dest: '',
+      priority: 'Normal'
+    });
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     if (isSubmitting) return; // Prevent duplicate submission
     
     setManualError('');
@@ -123,13 +172,24 @@ export function TaskAssign() {
     } finally {
       setIsSubmitting(false);
     }
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   };
   const exampleCommands = [
     'Start the conveyor',
     'Stop the camera',
     "What's in stock",
     'How many milk chocolate left',
+<<<<<<< HEAD
     'Pick 3 white chocolate',
+=======
+<<<<<<< HEAD
+=======
+    'Pick 3 white chocolate',
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     'Queue pick 10 dark chocolate',
     'Show active tasks',
     'System status',
@@ -162,6 +222,22 @@ export function TaskAssign() {
                 className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                 value={manualForm.type}
                 onChange={(e) =>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                setManualForm({
+                  ...manualForm,
+                  type: e.target.value
+                })
+                }>
+                
+                <option>Pick</option>
+                <option>Sort</option>
+                <option>Pack</option>
+                <option>Move</option>
+                <option>Retrieve</option>
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
                   setManualForm({
                     ...manualForm,
                     type: e.target.value
@@ -169,6 +245,10 @@ export function TaskAssign() {
                 }>
                 <option>Retrieve</option>
                 <option>Store</option>
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
               </select>
             </div>
 
@@ -195,6 +275,26 @@ export function TaskAssign() {
               </datalist>
             </div>
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+            <Input
+              label="Source Bin"
+              placeholder="e.g. A-01"
+              value={manualForm.source}
+              onChange={(e) =>
+                setManualForm({
+                  ...manualForm,
+                  source: e.target.value
+                })
+              }
+            />
+
+            <div className="pt-4 border-t border-border">
+              <Button type="submit" className="w-full">
+                Assign to Robot
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
                 Quantity
@@ -221,6 +321,10 @@ export function TaskAssign() {
             <div className="pt-4 border-t border-border">
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? 'Creating task...' : 'Assign Task'}
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
               </Button>
             </div>
           </form>
@@ -239,11 +343,23 @@ export function TaskAssign() {
                 <h2 className="text-xl font-serif font-semibold text-text-primary">
                   Voice Assistant
                 </h2>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                <p className="text-xs text-status-success flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-status-success" />
+                  On-device voice recognition · Ready
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
                 <p className="text-xs text-status-success flex flex-wrap items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-status-success" />
                   On-device voice recognition · Ready
                   <span className="mx-1">•</span>
                   {activeTasks?.length ?? 0} active tasks
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
                 </p>
               </div>
             </div>

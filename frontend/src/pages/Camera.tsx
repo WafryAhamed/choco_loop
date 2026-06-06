@@ -12,16 +12,70 @@ import { toast } from 'sonner';
 import { API_BASE, isApiReachable, markApiOffline, isFetchNetworkError } from '../lib/api';
 
 const VISION_BASE = 'http://localhost:8001';
+<<<<<<< HEAD
 const CAMERA_MODE_STORAGE_KEY = 'choco_camera_mode';
 type CameraMode = 'internal' | 'external' | 'off';
+=======
+<<<<<<< HEAD
+=======
+const CAMERA_MODE_STORAGE_KEY = 'choco_camera_mode';
+type CameraMode = 'internal' | 'external' | 'off';
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 
 export function Camera() {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [cameraOk, setCameraOk] = useState(false);
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  const [cameraType, setCameraType] = useState<'usb' | 'laptop' | 'unknown'>('unknown');
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const [lastError, setLastError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [recentDetections, setRecentDetections] = useState<any[]>([]);
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  const [cameraAvailable, setCameraAvailable] = useState<boolean | null>(null);
+
+  // Auto-detect camera type and availability
+  useEffect(() => {
+    const detectCamera = async () => {
+      try {
+        // Check for user media constraints to detect available cameras
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoCameras = devices.filter(d => d.kind === 'videoinput');
+        
+        if (videoCameras.length > 1) {
+          setCameraType('usb'); // USB camera detected if more than one camera
+          setCameraAvailable(true);
+        } else if (videoCameras.length === 1) {
+          setCameraType('laptop');
+          setCameraAvailable(true);
+        } else {
+          setCameraType('unknown');
+          setCameraAvailable(false);
+          setLastError('No camera devices detected');
+        }
+      } catch (err) {
+        console.warn('Camera detection error:', err);
+        setCameraAvailable(false);
+      }
+    };
+
+    detectCamera();
+
+    // Listen for device changes (USB camera plugin/eject)
+    navigator.mediaDevices.addEventListener('devicechange', detectCamera);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', detectCamera);
+    };
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const [selectedCameraMode, setSelectedCameraMode] = useState<CameraMode>('external');
   const [isApplyingCameraMode, setIsApplyingCameraMode] = useState(false);
 
@@ -135,6 +189,10 @@ export function Camera() {
     };
 
     autoStartCamera();
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   }, []);
 
   useEffect(() => {
@@ -177,6 +235,27 @@ export function Camera() {
   }, []);
 
   const toggleCamera = async () => {
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+    const wantOn = !isCameraOn;
+    setIsCameraOn(wantOn);
+    try {
+      const res = await fetch(`${VISION_BASE}/${wantOn ? 'start' : 'stop'}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok || data?.success === false) {
+        setIsCameraOn(!wantOn);
+        setLastError(data?.error || 'Camera request failed');
+      } else {
+        setLastError(null);
+      }
+    } catch {
+      setIsCameraOn(!wantOn);
+      setLastError('Vision service unreachable on port 8001');
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     // Camera is now auto-managed by backend
     // This function kept for emergency manual control if needed
     const wantOn = !isCameraOn;
@@ -249,6 +328,10 @@ export function Camera() {
       toast.success('Recording started');
     } else {
       toast.success('Recording saved');
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     }
   };
 
@@ -280,8 +363,18 @@ export function Camera() {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-text-secondary bg-black/90">
                 <CameraIcon size={48} className="mb-4 opacity-50" />
+<<<<<<< HEAD
                 <p className="text-xl font-medium">Camera Starting...</p>
                 <p className="text-sm opacity-75">Waiting for external USB camera</p>
+=======
+<<<<<<< HEAD
+                <p className="text-xl font-medium">Camera Offline</p>
+                <p className="text-sm opacity-75">Enable the master switch to start the feed</p>
+=======
+                <p className="text-xl font-medium">Camera Starting...</p>
+                <p className="text-sm opacity-75">Waiting for external USB camera</p>
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
               </div>
             )}
 
@@ -302,6 +395,11 @@ export function Camera() {
                 <span className="text-white/90 font-mono text-sm bg-black/40 px-2 py-1 rounded backdrop-blur-sm">
                   Conveyor-Cam-01
                 </span>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
                 {isCameraOn && cameraOk && (
                   <span className="text-sm text-green-300 bg-black/40 px-3 py-1 rounded ml-3 font-medium">
                     {selectedCameraMode === 'internal'
@@ -309,6 +407,10 @@ export function Camera() {
                       : 'External Camera Active (Index 1)'}
                   </span>
                 )}
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
               </div>
               <div className="flex gap-3 text-white/80 font-mono text-xs bg-black/40 px-3 py-1.5 rounded backdrop-blur-sm border border-white/10">
                 <span>{cameraOk ? '640×480' : 'No signal'}</span>
@@ -342,6 +444,13 @@ export function Camera() {
                 </button>
                 <button
                   type="button"
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                  className="p-2 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 backdrop-blur-md transition-colors opacity-50 cursor-not-allowed"
+                  title="Snapshot coming soon"
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
                   className={`p-2 rounded-full backdrop-blur-md border transition-colors ${isCameraOn ? 'bg-status-success/20 border-status-success text-status-success' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
                   onClick={toggleCamera}
                   title={isCameraOn ? 'Stop camera' : 'Start camera'}
@@ -353,6 +462,10 @@ export function Camera() {
                   className="p-2 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/20 backdrop-blur-md transition-colors"
                   title="Take screenshot"
                   onClick={takeScreenshot}
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
                 >
                   <ImageIcon size={20} />
                 </button>
@@ -367,6 +480,11 @@ export function Camera() {
             </div>
           </div>
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
           <div className="mt-4 rounded-3xl border border-border bg-surface p-4">
             <div className="flex flex-wrap gap-2">
               {(
@@ -393,6 +511,10 @@ export function Camera() {
             </div>
           </div>
 
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
           <Card>
             <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
               <Settings2 size={18} className="text-primary" />
@@ -429,6 +551,63 @@ export function Camera() {
         </div>
 
         <div className="space-y-6">
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+          <Card>
+            <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
+              <CameraIcon size={18} className="text-primary" />
+              Camera Configuration
+            </h3>
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg border border-border bg-surface">
+                <p className="text-xs text-text-secondary mb-1">Detected Camera</p>
+                <p className="font-medium text-text-primary">
+                  {cameraType === 'usb' && '📷 USB Camera (External)'}
+                  {cameraType === 'laptop' && '💻 Built-in Camera (Laptop)'}
+                  {cameraType === 'unknown' && '❓ No Camera Detected'}
+                </p>
+                <p className="text-xs text-text-secondary mt-1">
+                  {cameraAvailable === true && 'Camera device available'}
+                  {cameraAvailable === false && 'Connect a USB camera or enable laptop camera in settings'}
+                </p>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-surface">
+                <div>
+                  <p className="font-medium text-text-primary">Master Switch</p>
+                  <p className="text-xs text-text-secondary">Starts vision on port 8001</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleCamera}
+                  disabled={cameraAvailable === false}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isCameraOn ? 'bg-status-success' : cameraAvailable === false ? 'bg-gray-400' : 'bg-status-danger'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isCameraOn ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="font-semibold text-text-primary mb-4">Vision Service</h3>
+            <p className="text-sm text-text-secondary">
+              Detections are posted to the backend and update inventory automatically when
+              colored blocks enter the pick zone.
+            </p>
+            <p className="text-xs text-text-secondary mt-3 font-mono">
+              ESP32: configure IP in vision/stream_server.py
+            </p>
+          </Card>
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
         </div>
       </div>
     </div>

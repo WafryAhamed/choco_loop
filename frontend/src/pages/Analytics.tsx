@@ -15,8 +15,18 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+<<<<<<< HEAD
   ResponsiveContainer
 } from 'recharts';
+=======
+<<<<<<< HEAD
+  ResponsiveContainer } from
+'recharts';
+=======
+  ResponsiveContainer
+} from 'recharts';
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 import {
   Clock,
   CheckCircle2,
@@ -25,6 +35,18 @@ import {
   TrendingUp,
   Lightbulb,
   Trophy,
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  Flame } from
+'lucide-react';
+import { Card } from '../components/ui/Card';
+import { KPICard } from '../components/dashboard/KPICard';
+import { useDashboardSummary } from '../lib/useApi';
+
+const ranges = ['Today', '7d', '30d'];
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   Flame,
   Loader
 } from 'lucide-react';
@@ -38,6 +60,11 @@ const RANGES = [
 ];
 
 const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)'];
+<<<<<<< HEAD
+=======
+
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     return (

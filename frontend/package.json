@@ -5,7 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "npx vite",
+<<<<<<< HEAD
     "start": "npx vite",
+=======
+<<<<<<< HEAD
+=======
+    "start": "npx vite",
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     "build": "npx vite build",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "preview": "npx vite preview"

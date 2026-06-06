@@ -16,8 +16,16 @@ export const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+<<<<<<< HEAD
   enableKeepAlive: true,
   keepAliveInitialDelay: 30000
+=======
+<<<<<<< HEAD
+  enableKeepAlive: true,
+  keepAliveInitialDelayMs: 30000
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 });
 
 // Test connection and implement retry logic
@@ -42,7 +50,22 @@ export async function testConnection(): Promise<boolean> {
 }
 
 // Handle pool errors
+<<<<<<< HEAD
 (db as any).on('error', (err: any) => {
+=======
+<<<<<<< HEAD
+db.on('error', (err) => {
+  console.error('[DB Pool Error]:', err);
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+    console.error('[DB] Connection lost, will reconnect on next request');
+  }
+  if (err.code === 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR') {
+    console.error('[DB] Fatal error, recreating pool');
+  }
+  if (err.code === 'PROTOCOL_ENQUEUE_AFTER_RETIRE') {
+=======
+;(db as any).on('error', (err: any) => {
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   console.error('[DB Pool Error]:', err);
   if (err?.code === 'PROTOCOL_CONNECTION_LOST') {
     console.error('[DB] Connection lost, will reconnect on next request');
@@ -51,6 +74,10 @@ export async function testConnection(): Promise<boolean> {
     console.error('[DB] Fatal error, recreating pool');
   }
   if (err?.code === 'PROTOCOL_ENQUEUE_AFTER_RETIRE') {
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     console.error('[DB] Connection retired');
   }
 });

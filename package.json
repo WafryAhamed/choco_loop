@@ -1,10 +1,20 @@
 {
   "name": "chocolate-warehouse",
   "private": true,
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  "description": "Chocolate Warehouse monorepo root (backend, frontend, vision)"
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   "description": "Chocolate Warehouse monorepo root (backend, frontend, vision)",
   "scripts": {
     "init-db": "cd backend && npm run init-db",
     "start": "cd backend && npm run dev",
     "dev": "cd backend && npm run dev"
   }
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 }

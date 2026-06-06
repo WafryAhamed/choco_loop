@@ -1,4 +1,13 @@
+<<<<<<< HEAD
 CREATE DATABASE IF NOT EXISTS chocolate_warehouse_db;
+=======
+<<<<<<< HEAD
+DROP DATABASE IF EXISTS chocolate_warehouse_db;
+CREATE DATABASE chocolate_warehouse_db;
+=======
+CREATE DATABASE IF NOT EXISTS chocolate_warehouse_db;
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 USE chocolate_warehouse_db;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -6,14 +15,34 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255),
   email VARCHAR(255) UNIQUE,
   password_hash VARCHAR(255),
+<<<<<<< HEAD
   role ENUM('admin','operator') DEFAULT 'operator',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+=======
+<<<<<<< HEAD
+  role ENUM('admin','operator') DEFAULT 'operator',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+=======
+  role ENUM('warehouse_staff','warehouse_supervisor','maintenance_staff') DEFAULT 'warehouse_staff',
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 );
 
 CREATE TABLE IF NOT EXISTS inventory_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255),
+<<<<<<< HEAD
   sku VARCHAR(100) UNIQUE,
+=======
+<<<<<<< HEAD
+  sku VARCHAR(100),
+=======
+  sku VARCHAR(100) UNIQUE,
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   category VARCHAR(100),
   quantity INT DEFAULT 0,
   capacity INT DEFAULT 1000,
@@ -35,7 +64,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   duration VARCHAR(50),
   operator VARCHAR(100),
   confidence INT,
+<<<<<<< HEAD
   source ENUM('voice','manual','vision','web') DEFAULT 'manual',
+=======
+  source ENUM('voice','manual','vision') DEFAULT 'manual',
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   assigned_by INT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,

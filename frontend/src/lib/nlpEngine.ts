@@ -1,6 +1,10 @@
 /**
  * Enhanced NLP Engine for Voice Command Processing
+<<<<<<< HEAD
  * Handles STORE, RETRIEVE, INVENTORY, hardware commands (CAMERA, CONVEYOR, ROBOT)
+=======
+ * Focus: STORE and RETRIEVE intents with fuzzy product matching
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
  */
 
 // ============= TYPE DEFINITIONS =============
@@ -11,12 +15,15 @@ export type Intent =
   | 'INVENTORY_CHECK' 
   | 'TASK_STATUS' 
   | 'ROBOT_STATUS'
+<<<<<<< HEAD
   | 'CAMERA_ON'
   | 'CAMERA_OFF'
   | 'CONVEYOR_START'
   | 'CONVEYOR_STOP'
   | 'PAUSE_ROBOT'
   | 'RESUME_ROBOT'
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   | 'HELP' 
   | 'UNKNOWN';
 
@@ -37,7 +44,11 @@ export interface NLPResult {
   normalizedInput: string;
   validationErrors: string[];
   suggestedAction?: {
+<<<<<<< HEAD
     type: 'CREATE_TASK' | 'QUERY_INVENTORY' | 'SHOW_TASKS' | 'SHOW_ROBOTS' | 'HARDWARE_CMD' | 'HELP';
+=======
+    type: 'CREATE_TASK' | 'QUERY_INVENTORY' | 'SHOW_TASKS' | 'SHOW_ROBOTS' | 'HELP';
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     params?: Record<string, any>;
   };
 }
@@ -70,13 +81,17 @@ const INTENT_PATTERNS = {
     /\b(available|current|total)\s+(inventory|stock|quantity)\b/i,
     /\b(check|show)\s+\w+\s+stock\b/i,
     /^(inventory|stock)$/i,
+<<<<<<< HEAD
     /\bwhat'?s in stock\b/i,
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   ],
   TASK_STATUS: [
     /\b(show|display|view|open|list).*\b(task|tasks|pending|active|completed|failed|recent)\b/i,
     /\b(task|tasks)\s+(history|status|summary|list)\b/i,
   ],
   ROBOT_STATUS: [
+<<<<<<< HEAD
     /\b(system status|status report|how is the system|warehouse status)\b/i,
     /\brobot\s+(status|health|battery)\b/i,
     /^robot\s+status$/i,
@@ -103,6 +118,11 @@ const INTENT_PATTERNS = {
   RESUME_ROBOT: [
     /\b(resume|unpause|continue)\s+(robot|arm)\b/i,
   ],
+=======
+    /\brobot\s+(status|health|battery)\b/i,
+    /^robot\s+status$/i,
+  ],
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   HELP: [
     /\b(help|what can you do|commands|instructions|guide)\b/i,
     /^(help|\?)$/i,
@@ -152,6 +172,10 @@ function normalizeText(text: string): string {
 
 /**
  * Fuzzy match product name with inventory
+<<<<<<< HEAD
+=======
+ * Supports: Exact match, canonical alias matching, partial matching
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
  */
 function matchProductName(input: string, availableProducts: Product[]): string | undefined {
   if (!input) return undefined;
@@ -169,10 +193,18 @@ function matchProductName(input: string, availableProducts: Product[]): string |
     }
   }
 
+<<<<<<< HEAD
   // 2. Try canonical chocolate type aliases
   for (const choco of CHOCOLATE_PRODUCTS) {
     for (const alias of choco.aliases) {
       if (normalized.includes(alias)) {
+=======
+  // 2. Try canonical chocolate type aliases (e.g., "milk choc" → "Milk Chocolate")
+  for (const choco of CHOCOLATE_PRODUCTS) {
+    for (const alias of choco.aliases) {
+      if (normalized.includes(alias)) {
+        // Check if this chocolate type exists in inventory
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
         const found = availableProducts.find(p => 
           p.name.toLowerCase().includes(choco.canonical.toLowerCase())
         );
@@ -200,14 +232,25 @@ function matchProductName(input: string, availableProducts: Product[]): string |
 }
 
 /**
+<<<<<<< HEAD
  * Extract quantity from text
  */
 function extractQuantity(text: string): { quantity?: number; quantityWord?: string } {
+=======
+ * Extract quantity from text (numeric or word-based)
+ */
+function extractQuantity(text: string): { quantity?: number; quantityWord?: string } {
+  // Try numeric extraction first
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const numericMatch = text.match(/\b(\d+)\b/);
   if (numericMatch) {
     return { quantity: parseInt(numericMatch[1], 10) };
   }
   
+<<<<<<< HEAD
+=======
+  // Try word-based extraction
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const words = text.toLowerCase().split(/\s+/);
   for (const word of words) {
     if (QUANTITY_WORDS[word]) {
@@ -289,6 +332,7 @@ function generateSuggestedAction(
     
     case 'ROBOT_STATUS':
       return { type: 'SHOW_ROBOTS', params: {} };
+<<<<<<< HEAD
 
     case 'CAMERA_ON':
     case 'CAMERA_OFF':
@@ -297,6 +341,8 @@ function generateSuggestedAction(
     case 'PAUSE_ROBOT':
     case 'RESUME_ROBOT':
       return { type: 'HARDWARE_CMD', params: { cmd: intent } };
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
     
     case 'HELP':
       return { type: 'HELP' };
@@ -318,7 +364,14 @@ export function processNLP(
   const rawInput = input;
   const normalizedInput = normalizeText(input);
   
+<<<<<<< HEAD
   const { intent, confidence } = classifyIntent(input);
+=======
+  // Classify intent
+  const { intent, confidence } = classifyIntent(input);
+  
+  // Extract entities based on intent
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const entities: NLPResult['entities'] = {};
   
   if (intent === 'STORE' || intent === 'RETRIEVE') {
@@ -375,6 +428,7 @@ export function generateVoiceFeedback(result: NLPResult, executionSuccess?: bool
     return `Operation failed: ${errorReason || 'Unknown error'}`;
   }
   
+<<<<<<< HEAD
   switch (result.intent) {
     case 'STORE':
       return `Successfully stored ${result.entities.quantity} ${result.entities.product}.`;
@@ -403,6 +457,33 @@ export function generateVoiceFeedback(result: NLPResult, executionSuccess?: bool
     default:
       return `I understood your command. Processing...`;
   }
+=======
+  if (result.intent === 'STORE') {
+    return `Successfully stored ${result.entities.quantity} ${result.entities.product}.`;
+  }
+  
+  if (result.intent === 'RETRIEVE') {
+    return `Successfully retrieved ${result.entities.quantity} ${result.entities.product}.`;
+  }
+  
+  if (result.intent === 'INVENTORY_CHECK') {
+    return `Checking ${result.entities.product || 'inventory'}...`;
+  }
+  
+  if (result.intent === 'TASK_STATUS') {
+    return `Displaying task history...`;
+  }
+  
+  if (result.intent === 'ROBOT_STATUS') {
+    return `Displaying robot status...`;
+  }
+  
+  if (result.intent === 'HELP') {
+    return `Here are some commands: Store 5 chocolates, Retrieve 10 items, Show inventory, Check stock, Show tasks.`;
+  }
+  
+  return `I understood your command. Processing...`;
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 }
 
 /**
@@ -412,5 +493,25 @@ export function generateChatbotResponse(result: NLPResult): string {
   if (result.validationErrors.length > 0) {
     return `I understood you want to ${result.intent.toLowerCase()}. However: ${result.validationErrors.join(', ')}`;
   }
+<<<<<<< HEAD
   return generateVoiceFeedback(result, true);
+=======
+  
+  switch (result.intent) {
+    case 'STORE':
+      return `Storing ${result.entities.quantity} ${result.entities.product}...`;
+    case 'RETRIEVE':
+      return `Retrieving ${result.entities.quantity} ${result.entities.product}...`;
+    case 'INVENTORY_CHECK':
+      return `Checking ${result.entities.product || 'inventory'}...`;
+    case 'TASK_STATUS':
+      return 'Displaying current tasks...';
+    case 'ROBOT_STATUS':
+      return 'Checking robot status...';
+    case 'HELP':
+      return 'Available commands: Store, Retrieve, Check Inventory, Show Tasks, Robot Status, Help';
+    default:
+      return 'I did not understand that command.';
+  }
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 }

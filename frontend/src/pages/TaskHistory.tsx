@@ -23,6 +23,14 @@ export function TaskHistory() {
   const { taskHistory } = useTasksHistory();
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('All');
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  const filteredHistory = taskHistory.filter((task) =>
+  statusFilter === 'All' ? true : task.status === statusFilter
+  );
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
   const [taskTypeFilter, setTaskTypeFilter] = useState('All Types');
   
@@ -49,6 +57,10 @@ export function TaskHistory() {
     
     return matchesStatus && matchesDate && matchesTaskType;
   });
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const successCount = taskHistory.filter((t) => t.status === 'Success').length;
   const failCount = taskHistory.length - successCount;
   const successRate = Math.round(successCount / taskHistory.length * 100);
@@ -80,7 +92,11 @@ export function TaskHistory() {
       </div>
 
       {/* Top Section: Filters & Stats */}
+<<<<<<< HEAD
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+=======
+      <div className="grid grid-cols-1 gap-6">
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
         <Card className="flex flex-col justify-center">
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
@@ -88,8 +104,17 @@ export function TaskHistory() {
                 label="Date Range"
                 type="date"
                 icon={<Calendar size={18} />}
+<<<<<<< HEAD
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)} />
+=======
+<<<<<<< HEAD
+                defaultValue={new Date().toISOString().split('T')[0]} />
+=======
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)} />
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
               
             </div>
             <div className="flex-1 min-w-[150px]">
@@ -110,10 +135,20 @@ export function TaskHistory() {
               <label className="block text-sm font-medium text-text-secondary mb-1.5">
                 Task Type
               </label>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+              <select className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary">
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
               <select 
                 className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                 value={taskTypeFilter}
                 onChange={(e) => setTaskTypeFilter(e.target.value)}>
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
                 <option>All Types</option>
                 <option>Place</option>
                 <option>Retrieve</option>
@@ -124,6 +159,7 @@ export function TaskHistory() {
             </Button>
           </div>
         </Card>
+<<<<<<< HEAD
         
         {/* Pie Chart Card */}
         <Card className="flex flex-col">
@@ -161,6 +197,8 @@ export function TaskHistory() {
             </div>
           </div>
         </Card>
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
       </div>
 
       {/* Main Table */}

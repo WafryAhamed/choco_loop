@@ -1,5 +1,13 @@
 import React from 'react';
+<<<<<<< HEAD
 import { Package, Activity, Zap, TrendingUp, Box } from 'lucide-react';
+=======
+<<<<<<< HEAD
+import { Package, Activity, Zap, TrendingUp } from 'lucide-react';
+=======
+import { Package, Activity, Zap, TrendingUp, Box } from 'lucide-react';
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 import {
   AreaChart,
   Area,
@@ -17,24 +25,52 @@ import { CameraPreview } from '../components/dashboard/CameraPreview';
 import { TaskQueue } from '../components/dashboard/TaskQueue';
 import { ActivityTimeline } from '../components/dashboard/ActivityTimeline';
 import { Card } from '../components/ui/Card';
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+import { useDashboardSummary } from '../lib/useApi';
+export function Dashboard() {
+  const { user } = useAuth();
+  const { throughputData, inventoryDistribution, dailySummary } = useDashboardSummary();
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
 import { useDashboardSummary, useInventory } from '../lib/useApi';
 export function Dashboard() {
   const { user } = useAuth();
   const { throughputData, inventoryDistribution, dailySummary } = useDashboardSummary();
   const { inventoryData } = useInventory();
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric'
   });
+<<<<<<< HEAD
   // Calculate total inventory units
   const totalInventoryUnits = inventoryData.reduce((sum, item) => sum + (item.quantity || 0), 0);
+=======
+<<<<<<< HEAD
+=======
+  // Calculate total inventory units
+  const totalInventoryUnits = inventoryData.reduce((sum, item) => sum + (item.quantity || 0), 0);
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   // Mock sparkline data removed
   const sparklineData1: any[] = [];
   const sparklineData2: any[] = [];
   const sparklineData3: any[] = [];
   const sparklineData4: any[] = [];
+<<<<<<< HEAD
   const sparklineData5: any[] = [];
+=======
+<<<<<<< HEAD
+=======
+  const sparklineData5: any[] = [];
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
   // Custom Tooltip for Recharts
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -70,7 +106,15 @@ export function Dashboard() {
       </div>
 
       {/* KPI Grid */}
+<<<<<<< HEAD
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+=======
+<<<<<<< HEAD
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+=======
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
         <KPICard
           title="Total Items Sorted Today"
           value={dailySummary?.itemsSorted || 0}
@@ -101,6 +145,11 @@ export function Dashboard() {
           data={sparklineData4}
           delay={0.4} />
         
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
         <KPICard
           title="Total Inventory"
           value={totalInventoryUnits}
@@ -108,6 +157,10 @@ export function Dashboard() {
           icon={Box}
           data={sparklineData5}
           delay={0.5} />
+<<<<<<< HEAD
+=======
+>>>>>>> fix-camera
+>>>>>>> 6a0304bb03f877fde527fa11a075f5024efd09c6
       </div>
 
       {/* Main Content Grid */}
